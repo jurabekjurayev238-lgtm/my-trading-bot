@@ -1,0 +1,26 @@
+/* Full-viewport dark stage. The 1920x1080 canvas buffer is scaled to
+   fit the window while preserving its 16:9 aspect via object-fit:contain. */
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #05070d;
+  overflow: hidden;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The canvas keeps its internal 1920x1080 resolution; CSS only resizes
+   how it is displayed. object-fit:contain letterboxes it inside the window. */
+canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  image-rendering: auto;
+}
