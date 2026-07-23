@@ -7,3 +7,6 @@ __pycache__/
 media/videos/**/partial_movie_files/
 media/texts/
 media/tex/
+media/videos/**/concat_list.txt
+media/Tex/
+media/videos/**/480p15/
