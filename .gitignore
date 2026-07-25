@@ -10,3 +10,12 @@ media/tex/
 media/videos/**/concat_list.txt
 media/Tex/
 media/videos/**/480p15/
+media/videos/**/1920p15/
+
+# scratch / working dirs (benchmarks, filter tests, render logs)
+scratch_*/
+media/videos/bench/
+
+# raw manim output for the vertical loop — the deliverable is the
+# top-level kinetic_infinity_1080x1920.mp4
+media/videos/kinetic_infinity/
