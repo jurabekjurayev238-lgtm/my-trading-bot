@@ -1,0 +1,397 @@
+<title>Zamonaviy Taqdimot Shabloni</title>
+
+<style>
+  /* ------------------------------------------------------------------
+     Palitra — asl React kodidagi Tailwind qiymatlari
+     ------------------------------------------------------------------ */
+  :root {
+    --ground:  #020617;  /* slate-950 */
+    --track:   #1e293b;  /* slate-800 */
+    --rule:    #334155;  /* slate-700 */
+    --muted:   #94a3b8;  /* slate-400 */
+    --body:    #cbd5e1;  /* slate-300 */
+    --ink:     #ffffff;
+    --blue:    #60a5fa;  /* blue-400  */
+    --purple:  #a855f7;  /* purple-500 */
+    --blue-500:#3b82f6;
+    --yellow:  #facc15;  /* yellow-400 */
+    --green:   #4ade80;  /* green-400  */
+    --blue-900:#1e3a8a;
+    --purple-900:#581c87;
+
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+            "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  }
+
+  /* Taqdimot — ataylab bitta (to'q) vizual dunyoga sodiq qoladi:
+     u proyektorga chiqariladigan sahna, shuning uchun light tema yo'q. */
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--ground);
+    overflow: hidden;
+  }
+
+  .stage {
+    position: relative;
+    width: 100%;
+    height: 100dvh;
+    background: var(--ground);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--sans);
+    color: var(--body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--blue-500); color: #fff; }
+
+  /* ---------- orqa fon bezaklari ---------- */
+  .decor {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .orb { position: absolute; border-radius: 9999px; filter: blur(120px); }
+  .orb-a {
+    top: -20%; left: -10%; width: 50%; height: 50%;
+    background: rgba(30, 58, 138, 0.20);      /* blue-900/20 */
+  }
+  .orb-b {
+    top: 60%; right: -10%; width: 40%; height: 60%;
+    background: rgba(88, 28, 135, 0.20);      /* purple-900/20 */
+  }
+
+  /* ---------- slaydlar ---------- */
+  .slides { position: relative; z-index: 10; flex: 1 1 auto; width: 100%; height: 100%; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 0 2rem 6rem;                      /* pastdagi panel ustiga tushmasin */
+    opacity: 0;
+    z-index: 0;
+    pointer-events: none;
+    transition: opacity 700ms ease-in-out;
+  }
+  .slide.is-active { opacity: 1; z-index: 20; pointer-events: auto; }
+
+  .pane { height: 100%; display: flex; flex-direction: column; justify-content: center; }
+  .pane.center { align-items: center; text-align: center; }
+  .pane.narrow { max-width: 56rem; margin-inline: auto; }
+
+  /* fadeInUp — faqat faol slaydda qayta ishga tushadi */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .slide.is-active .pane { animation: fadeInUp 0.8s ease-out both; }
+
+  /* ---------- tipografika ---------- */
+  .title {
+    font-size: clamp(2.6rem, 8vw, 4.5rem);
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin: 0 0 1.5rem;
+    text-wrap: balance;
+    background-image: linear-gradient(to right, var(--blue), var(--purple));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .subtitle {
+    font-size: clamp(1.15rem, 3.2vw, 1.875rem);
+    font-weight: 300;
+    color: var(--body);
+    margin: 0;
+    max-width: 40ch;
+    text-wrap: balance;
+  }
+  .heading {
+    font-size: clamp(2.1rem, 6vw, 3.75rem);
+    line-height: 1.1;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--rule);
+    text-wrap: balance;
+  }
+  .body-text {
+    font-size: clamp(1.1rem, 2.6vw, 1.5rem);
+    font-weight: 300;
+    line-height: 1.7;
+    color: var(--body);
+    margin: 0;
+    max-width: 62ch;
+  }
+
+  .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1.5rem; }
+  .list li {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: clamp(1.05rem, 3vw, 1.875rem);
+    font-weight: 300;
+    color: var(--body);
+  }
+  .bullet {
+    flex: 0 0 auto;
+    width: 0.75rem; height: 0.75rem;
+    border-radius: 9999px;
+    background: var(--blue-500);
+  }
+
+  .icon-lead { margin-bottom: 1rem; }
+  .icon-lead.big { margin-bottom: 1.5rem; }
+
+  /* ---------- boshqaruv tugmalari ---------- */
+  .nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    padding: 0.75rem;
+    border: 0;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    cursor: pointer;
+    transition: background 200ms ease, opacity 200ms ease;
+  }
+  .nav:hover:not(:disabled) { background: rgba(255, 255, 255, 0.20); }
+  .nav:focus-visible { outline: 2px solid var(--blue-500); outline-offset: 2px; }
+  .nav:disabled { opacity: 0.3; cursor: not-allowed; }
+  .nav-prev { left: 1rem; }
+  .nav-next { right: 1rem; }
+
+  /* ---------- pastki panel ---------- */
+  .footer { position: absolute; bottom: 0; left: 0; width: 100%; z-index: 30; }
+  .footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 2rem;
+    color: var(--muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .counter { font-variant-numeric: tabular-nums; }
+  .progress-track { width: 100%; height: 0.375rem; background: var(--track); }
+  .progress-fill {
+    height: 100%;
+    width: 25%;
+    background-image: linear-gradient(to right, var(--blue-500), var(--purple));
+    transition: width 500ms cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  @media (min-width: 768px) {
+    .slide { padding-left: 6rem; padding-right: 6rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide, .progress-fill { transition-duration: 1ms; }
+    .slide.is-active .pane { animation: none; }
+  }
+</style>
+
+<div class="stage" id="stage">
+  <div class="decor" aria-hidden="true">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+  </div>
+
+  <div class="slides" id="slides" aria-live="polite"></div>
+
+  <button class="nav nav-prev" id="prev" aria-label="Oldingi slayd">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="m15 18-6-6 6-6"/>
+    </svg>
+  </button>
+
+  <button class="nav nav-next" id="next" aria-label="Keyingi slayd">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="m9 18 6-6-6-6"/>
+    </svg>
+  </button>
+
+  <div class="footer">
+    <div class="footer-row">
+      <span>Kompaniya Nomi / Ismingiz</span>
+      <span class="counter" id="counter">1 / 4</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    'use strict';
+
+    // lucide ikonkalari — inline SVG (CSP tashqi paketga ruxsat bermaydi)
+    var ICON = {
+      presentation:
+        '<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>',
+      monitorPlay:
+        '<path d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.64z"/>' +
+        '<path d="M12 17v4"/><path d="M8 21h8"/><rect x="2" y="3" width="20" height="14" rx="2"/>',
+      zap:
+        '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+      checkCircle:
+        '<path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/>'
+    };
+
+    function icon(name, size, color, extraClass) {
+      return '<svg class="icon-lead ' + (extraClass || '') + '" width="' + size + '" height="' + size +
+        '" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[name] + '</svg>';
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    // Slayd ma'lumotlari — asl React kodidagi bilan bir xil
+    var slides = [
+      {
+        layout: 'title',
+        title: 'Zamonaviy Taqdimot Shabloni',
+        subtitle: 'Taqdimotingizni yanada qiziqarli va professional qiling',
+        icon: icon('presentation', 80, 'var(--blue)', 'big')
+      },
+      {
+        layout: 'content',
+        title: 'Biz haqimizda',
+        content: 'Biz eng soʻnggi texnologiyalardan foydalangan holda qulay va zamonaviy interfeyslar yaratamiz. Maqsadimiz barcha uchun tushunarli va chiroyli dizaynlarni taqdim etishdir.',
+        icon: icon('monitorPlay', 48, 'var(--purple)')
+      },
+      {
+        layout: 'list',
+        title: 'Asosiy Xususiyatlar',
+        items: [
+          'Tez va silliq animatsiyalar',
+          'Barcha qurilmalarga mos (Moslashuvchan/Responsive)',
+          'Oson tahrirlanadigan kod tuzilmasi',
+          'Koʻzni qamashtiruvchi zamonaviy dizayn'
+        ],
+        icon: icon('zap', 48, 'var(--yellow)')
+      },
+      {
+        layout: 'title',
+        title: 'Eʼtiboringiz uchun rahmat!',
+        subtitle: 'Savollaringiz boʻlsa, javob berishdan mamnun boʻlamiz.',
+        icon: icon('checkCircle', 80, 'var(--green)')
+      }
+    ];
+
+    function slideMarkup(s) {
+      if (s.layout === 'title') {
+        return '<div class="pane center">' + s.icon +
+          '<h1 class="title">' + esc(s.title) + '</h1>' +
+          '<p class="subtitle">' + esc(s.subtitle) + '</p></div>';
+      }
+      if (s.layout === 'content') {
+        return '<div class="pane narrow">' + s.icon +
+          '<h2 class="heading">' + esc(s.title) + '</h2>' +
+          '<p class="body-text">' + esc(s.content) + '</p></div>';
+      }
+      if (s.layout === 'list') {
+        var li = s.items.map(function (t) {
+          return '<li><span class="bullet"></span>' + esc(t) + '</li>';
+        }).join('');
+        return '<div class="pane narrow">' + s.icon +
+          '<h2 class="heading">' + esc(s.title) + '</h2>' +
+          '<ul class="list">' + li + '</ul></div>';
+      }
+      return '';
+    }
+
+    var host = document.getElementById('slides');
+    var prevBtn = document.getElementById('prev');
+    var nextBtn = document.getElementById('next');
+    var counter = document.getElementById('counter');
+    var progress = document.getElementById('progress');
+    var stage = document.getElementById('stage');
+
+    host.innerHTML = slides.map(function (s, i) {
+      return '<section class="slide" data-i="' + i + '" aria-hidden="true">' + slideMarkup(s) + '</section>';
+    }).join('');
+
+    var nodes = Array.prototype.slice.call(host.querySelectorAll('.slide'));
+    var current = 0;
+    var last = slides.length - 1;
+
+    function render() {
+      nodes.forEach(function (n, i) {
+        var on = i === current;
+        n.classList.toggle('is-active', on);
+        n.setAttribute('aria-hidden', on ? 'false' : 'true');
+      });
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === last;
+      counter.textContent = (current + 1) + ' / ' + slides.length;
+      progress.style.width = ((current + 1) / slides.length * 100) + '%';
+    }
+
+    function go(to) {
+      var n = Math.max(0, Math.min(last, to));
+      if (n === current) return;
+      current = n;
+      render();
+    }
+    function next() { go(current + 1); }
+    function prev() { go(current - 1); }
+
+    nextBtn.addEventListener('click', next);
+    prevBtn.addEventListener('click', prev);
+
+    // Klaviatura: probel uchun e.key = ' ' ('Space' emas — u e.code)
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault(); next();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault(); prev();
+      } else if (e.key === 'Home') {
+        e.preventDefault(); go(0);
+      } else if (e.key === 'End') {
+        e.preventDefault(); go(last);
+      }
+    });
+
+    // Mobil: surish (swipe)
+    var MIN_SWIPE = 50;
+    var tStart = null, tEnd = null;
+    stage.addEventListener('touchstart', function (e) {
+      tEnd = null; tStart = e.targetTouches[0].clientX;
+    }, { passive: true });
+    stage.addEventListener('touchmove', function (e) {
+      tEnd = e.targetTouches[0].clientX;
+    }, { passive: true });
+    stage.addEventListener('touchend', function () {
+      if (tStart === null || tEnd === null) return;
+      var d = tStart - tEnd;
+      if (d > MIN_SWIPE) next();
+      if (d < -MIN_SWIPE) prev();
+      tStart = null; tEnd = null;      // holatni tozalaymiz
+    });
+
+    render();
+  })();
+</script>
