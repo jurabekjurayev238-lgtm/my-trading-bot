@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Presentation, MonitorPlay, Zap, CheckCircle2 } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, Presentation, MonitorPlay, Zap,
+  TrendingUp, Workflow, Target, Rocket, CheckCircle2
+} from 'lucide-react';
 
 export default function App() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -36,6 +39,48 @@ export default function App() {
     },
     {
       id: 4,
+      layout: 'stats',
+      title: 'Raqamlarda',
+      stats: [
+        { value: '150+', label: 'Yakunlangan loyiha' },
+        { value: '98%', label: 'Mijozlar mamnunligi' },
+        { value: '24/7', label: 'Qoʻllab-quvvatlash' }
+      ],
+      icon: <TrendingUp className="w-12 h-12 text-cyan-400 mb-4" />
+    },
+    {
+      id: 5,
+      layout: 'steps',
+      title: 'Qanday ishlaymiz',
+      steps: [
+        { title: 'Tahlil', desc: 'Maqsad va auditoriyani aniqlaymiz' },
+        { title: 'Dizayn', desc: 'Prototip va vizual yoʻnalishni tayyorlaymiz' },
+        { title: 'Ishlab chiqish', desc: 'Kodni yozamiz va sinovdan oʻtkazamiz' },
+        { title: 'Ishga tushirish', desc: 'Natijani kuzatib, yaxshilab boramiz' }
+      ],
+      icon: <Workflow className="w-12 h-12 text-purple-400 mb-4" />
+    },
+    {
+      id: 6,
+      layout: 'content',
+      title: 'Nega aynan biz?',
+      content: 'Har bir loyihaga tayyor shablon sifatida emas, alohida vazifa sifatida yondashamiz. Kod tuzilmasi ochiq va izohlangan — jamoangiz uni mustaqil davom ettira oladi.',
+      icon: <Target className="w-12 h-12 text-orange-400 mb-4" />
+    },
+    {
+      id: 7,
+      layout: 'list',
+      title: 'Keyingi qadamlar',
+      items: [
+        'Shablonni oʻzingizga moslang',
+        'Matn va ranglarni almashtiring',
+        'Slaydlarni kerakligicha koʻpaytiring',
+        'Taqdimotni ulashing yoki eksport qiling'
+      ],
+      icon: <Rocket className="w-12 h-12 text-pink-400 mb-4" />
+    },
+    {
+      id: 8,
       layout: 'title',
       title: 'Eʼtiboringiz uchun rahmat!',
       subtitle: 'Savollaringiz boʻlsa, javob berishdan mamnun boʻlamiz.',
@@ -140,6 +185,54 @@ export default function App() {
             </ul>
           </div>
         );
+      case 'stats':
+        return (
+          <div className="flex flex-col justify-center h-full max-w-4xl mx-auto w-full animate-fade-in-up">
+            {slide.icon}
+            <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 border-b border-slate-700 pb-4">
+              {slide.title}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+              {slide.stats.map((s, index) => (
+                <div key={index}>
+                  <div className="text-5xl md:text-6xl font-extrabold tabular-nums tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+                    {s.value}
+                  </div>
+                  <div className="mt-2 text-base md:text-lg text-slate-400 font-light">
+                    {s.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      case 'steps':
+        // Raqamlash o'rinli: bu haqiqiy ketma-ketlik (jarayon).
+        return (
+          <div className="flex flex-col justify-center h-full max-w-4xl mx-auto w-full animate-fade-in-up">
+            {slide.icon}
+            <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 border-b border-slate-700 pb-4">
+              {slide.title}
+            </h2>
+            <ol className="space-y-5">
+              {slide.steps.map((s, index) => (
+                <li key={index} className="flex items-start gap-5">
+                  <span className="flex-shrink-0 grid place-items-center w-11 h-11 md:w-12 md:h-12 rounded-full border border-slate-700 bg-white/5 text-blue-400 font-bold tabular-nums">
+                    {index + 1}
+                  </span>
+                  <div>
+                    <div className="text-lg md:text-2xl font-semibold text-white leading-snug">
+                      {s.title}
+                    </div>
+                    <div className="mt-1 text-base md:text-lg text-slate-400 font-light">
+                      {s.desc}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        );
       default:
         return null;
     }
@@ -163,7 +256,7 @@ export default function App() {
         {slides.map((slide, index) => (
           <div
             key={slide.id}
-            className={`absolute inset-0 px-8 md:px-24 pb-24 transition-opacity duration-700 ease-in-out ${
+            className={`absolute inset-0 px-14 md:px-24 pb-24 transition-opacity duration-700 ease-in-out ${
               index === currentSlide ? 'opacity-100 pointer-events-auto z-20' : 'opacity-0 pointer-events-none z-0'
             }`}
           >
@@ -176,23 +269,23 @@ export default function App() {
       <button
         onClick={prevSlide}
         disabled={currentSlide === 0}
-        className={`absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm transition-all z-30 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+        className={`absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm transition-all z-30 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
           currentSlide === 0 ? 'opacity-30 cursor-not-allowed' : 'opacity-100 cursor-pointer'
         }`}
         aria-label="Oldingi slayd"
       >
-        <ChevronLeft className="w-8 h-8" />
+        <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" />
       </button>
 
       <button
         onClick={nextSlide}
         disabled={currentSlide === lastIndex}
-        className={`absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm transition-all z-30 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+        className={`absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm transition-all z-30 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
           currentSlide === lastIndex ? 'opacity-30 cursor-not-allowed' : 'opacity-100 cursor-pointer'
         }`}
         aria-label="Keyingi slayd"
       >
-        <ChevronRight className="w-8 h-8" />
+        <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />
       </button>
 
       {/* Pastki qism - Jarayon (Progress) va Slayd Raqami */}
