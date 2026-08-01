@@ -14,7 +14,9 @@ import random
 
 # === SOZLAMALAR ===
 # Teksturalar saqlangan papka. Windows: "C:/textures/", Mac/Linux: "/home/user/textures/"
-TEXTURE_FOLDER = "C:/textures/"
+# Faylni tahrirlamasdan, muhit o'zgaruvchisi orqali ham berish mumkin:
+#   SOLAR_TEXTURE_FOLDER=/path/to/textures blender --background --python solar_system.py
+TEXTURE_FOLDER = os.environ.get("SOLAR_TEXTURE_FOLDER", "C:/textures/")
 
 STAR_COUNT = 3000        # Fondagi yulduzlar soni
 STAR_INNER_RADIUS = 120  # Yulduzlar sferasining ichki chegarasi

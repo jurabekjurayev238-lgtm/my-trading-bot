@@ -43,6 +43,13 @@ TEXTURE_FOLDER = "C:/textures/"        # Windows
 # TEXTURE_FOLDER = "/home/user/textures/"   # Linux / Mac
 ```
 
+Faylni umuman tahrirlamasdan, muhit o'zgaruvchisi orqali ham berish mumkin —
+bu ayniqsa konsoldan render qilishda qulay:
+
+```
+SOLAR_TEXTURE_FOLDER=/path/to/textures blender --background --python solar_system.py
+```
+
 Boshqa fayl nomlaridan foydalanmoqchi bo'lsangiz, sayyora yaratilayotgan joyda
 `texture("earth.jpg")` qismini o'zgartiring.
 
@@ -75,6 +82,39 @@ istalgan vaqtda qayta ishga tushirish mumkin — keraksiz nusxalar to'planmaydi.
 
 Halqa shaffofligi faqat **Rendered** yoki **Material Preview** rejimida ko'rinadi —
 Solid rejimda u yaxlit disk bo'lib turadi, bu normal holat.
+
+## 5. Konsoldan render qilish (headless)
+
+`render_preview.py` sahnani GUI'siz render qiladi. U sahna dizayniga tegmaydi —
+faqat render sozlamalarini va uchta vaqtinchalik ko'rish kamerasini qo'shadi:
+
+```
+SOLAR_TEXTURE_FOLDER=/path/to/textures \
+blender --background --factory-startup \
+    --python blender/solar_system.py \
+    --python blender/render_preview.py -- --out ./renders
+```
+
+Natijada uchta rasm chiqadi: `01_main_camera.png` (skriptdagi haqiqiy kuzatuv
+kamerasi), `02_overview.png` (butun tizim) va `03_saturn_ring.png` (halqa yaqindan).
+
+| Muhit o'zgaruvchisi | Vazifasi | Standart |
+|---|---|---|
+| `RENDER_SAMPLES` | Cycles namunalari | `128` |
+| `RENDER_RES_X` / `RENDER_RES_Y` | O'lcham | `1920` / `1080` |
+| `RENDER_FRAME` | Qaysi kadr | `200` |
+
+Nima uchun 200-kadr: 1-kadrda barcha orbitalar 0 gradusdan boshlangani uchun
+sayyoralar bir chiziqda turadi, 200-kadrda esa ular chiroyli tarqalgan bo'ladi.
+
+Render **Cycles CPU** da ketadi — konsol rejimida OpenGL konteksti bo'lmagani
+uchun EEVEE ishga tushmaydi.
+
+Har bir kadr uchun ekspozitsiya har xil qilib berilgan. Buning sababi fizik:
+Quyosh nuri masofa kvadratiga teskari kamayadi, shuning uchun Saturn (34 birlik)
+Yerdan (12 birlik) taxminan 8 baravar qorong'iroq yoritiladi.
+
+> Sinovdan o'tgan: **Blender 4.2.9 LTS**, Linux x64, Cycles CPU.
 
 ## Sozlamalar
 
