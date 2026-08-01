@@ -108,6 +108,140 @@ def create_planet(name, radius, distance, color, speed, parent_obj=None, texture
     return planet, orbit
 
 
+# === YORDAMCHI FUNKSIYA: SAYYORA HALQASINI YARATISH ===
+def create_ring(planet, inner_radius, outer_radius, texture_path=None, segments=128):
+    """Sayyora atrofida yassi halqa (annulus) yaratadi.
+
+    Torus ishlatilmaydi - u hajmli "bublik" bo'lib qoladi. Buning o'rniga mesh
+    qo'lda quriladi va UV koordinatalari radial beriladi: U = 0 halqaning ichki
+    chekkasi, U = 1 tashqi chekkasi. Saturn halqasi teksturalari aynan shunday -
+    radial chiziq ko'rinishida tayyorlanadi.
+    """
+    name = f"{planet.name}_Ring"
+
+    # a) Halqa geometriyasi: har bir segmentda ichki va tashqi nuqta juftligi
+    verts = []
+    faces = []
+    for i in range(segments):
+        angle = 2.0 * math.pi * i / segments
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        verts.append((inner_radius * cos_a, inner_radius * sin_a, 0.0))
+        verts.append((outer_radius * cos_a, outer_radius * sin_a, 0.0))
+
+    for i in range(segments):
+        j = (i + 1) % segments
+        faces.append((2 * i, 2 * i + 1, 2 * j + 1, 2 * j))
+
+    mesh = bpy.data.meshes.new(f"{name}_Mesh")
+    mesh.from_pydata(verts, [], faces)
+    mesh.update()
+
+    # b) UV koordinatalari: U - radial (ichkidan tashqariga), V - halqa bo'ylab
+    uv_layer = mesh.uv_layers.new(name="UVMap")
+    for face_index, polygon in enumerate(mesh.polygons):
+        v_start = face_index / segments
+        v_end = (face_index + 1) / segments
+        corner_uvs = ((0.0, v_start), (1.0, v_start), (1.0, v_end), (0.0, v_end))
+        for corner, loop_index in enumerate(polygon.loop_indices):
+            uv_layer.data[loop_index].uv = corner_uvs[corner]
+
+    ring = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(ring)
+
+    # c) Halqa sayyoraning o'z tekisligida yotadi - sayyora qiyshaytirilsa,
+    # halqa ham u bilan birga qiyshayadi
+    ring.parent = planet
+    ring.matrix_parent_inverse.identity()
+
+    # d) Material
+    mat = bpy.data.materials.new(name=f"{name}_Material")
+    mat.use_nodes = True
+    node_tree = mat.node_tree
+    bsdf = node_tree.nodes.get("Principled BSDF")
+    if bsdf:
+        bsdf.inputs['Roughness'].default_value = 0.9
+
+        image = None
+        if texture_path and os.path.isfile(bpy.path.abspath(texture_path)):
+            try:
+                image = bpy.data.images.load(texture_path, check_existing=True)
+            except RuntimeError as error:
+                print(f"[{name}] Rasmni yuklab bo'lmadi: {texture_path} -> {error}")
+
+        if image:
+            tex_node = node_tree.nodes.new(type='ShaderNodeTexImage')
+            tex_node.image = image
+            tex_node.extension = 'EXTEND'  # Chekkalarda rasm takrorlanmasin
+            tex_node.location = (-440, 300)
+            tex_node.label = f"{name} Texture"
+            color_output = tex_node.outputs['Color']
+            alpha_output = tex_node.outputs['Alpha']
+        else:
+            # Tekstura yo'q - halqani ColorRamp bilan protsedural chizamiz.
+            # UV ning U o'qi radial bo'lgani uchun bu haqiqiy halqa qatlamlarini beradi
+            if texture_path:
+                print(f"[{name}] Tekstura topilmadi: {texture_path} "
+                      "(protsedural halqa qo'llanildi)")
+
+            tex_coord = node_tree.nodes.new(type='ShaderNodeTexCoord')
+            tex_coord.location = (-900, 300)
+            separate = node_tree.nodes.new(type='ShaderNodeSeparateXYZ')
+            separate.location = (-700, 300)
+            node_tree.links.new(tex_coord.outputs['UV'], separate.inputs['Vector'])
+
+            ramp_node = node_tree.nodes.new(type='ShaderNodeValToRGB')
+            ramp_node.location = (-500, 300)
+            node_tree.links.new(separate.outputs['X'], ramp_node.inputs['Fac'])
+
+            # (radial joylashuv, RGBA) - alfasi 0 bo'lgan joylar halqadagi bo'shliqlar
+            bands = (
+                (0.00, (0.55, 0.48, 0.38, 0.00)),
+                (0.08, (0.72, 0.65, 0.52, 0.55)),
+                (0.30, (0.88, 0.80, 0.65, 0.95)),
+                (0.52, (0.45, 0.40, 0.34, 0.15)),  # Kassini bo'shlig'i
+                (0.60, (0.90, 0.83, 0.68, 0.90)),
+                (0.85, (0.70, 0.63, 0.52, 0.55)),
+                (1.00, (0.60, 0.55, 0.45, 0.00)),
+            )
+            elements = ramp_node.color_ramp.elements
+            elements[0].position, elements[0].color = bands[0]
+            elements[1].position, elements[1].color = bands[-1]
+            for position, rgba in bands[1:-1]:
+                elements.new(position).color = rgba
+
+            color_output = ramp_node.outputs['Color']
+            alpha_output = ramp_node.outputs['Alpha']
+
+        node_tree.links.new(color_output, bsdf.inputs['Base Color'])
+        node_tree.links.new(alpha_output, bsdf.inputs['Alpha'])
+
+        # Halqa Quyoshdan teskari tomonda qolganda butunlay qorayib ketmasligi uchun
+        # juda kuchsiz o'z-o'zidan yorug'lik.
+        # Blender 4.x da soket nomi 'Emission' dan 'Emission Color' ga o'zgargan
+        emission_color = bsdf.inputs.get('Emission Color') or bsdf.inputs.get('Emission')
+        if emission_color is not None:
+            node_tree.links.new(color_output, emission_color)
+        emission_strength = bsdf.inputs.get('Emission Strength')
+        if emission_strength is not None:
+            emission_strength.default_value = 0.15
+
+    # e) Shaffoflik. Cycles buni o'zi hal qiladi, EEVEE uchun aniq ko'rsatish kerak.
+    # Blender 4.2+ da bu sozlamalar o'zgargani uchun himoyalangan holda o'rnatamiz
+    try:
+        mat.blend_method = 'BLEND'
+    except TypeError:
+        pass
+    if hasattr(mat, "shadow_method"):
+        try:
+            mat.shadow_method = 'CLIP'
+        except TypeError:
+            pass
+
+    ring.data.materials.append(mat)
+
+    return ring
+
+
 # 3. QUYOSH VA YORUG'LIK MANBAI
 # Quyosh sferasi
 bpy.ops.mesh.primitive_uv_sphere_add(radius=2.5, location=(0, 0, 0))
@@ -151,6 +285,19 @@ mars, _ = create_planet(
 jupiter, _ = create_planet(
     "Jupiter", radius=1.4, distance=26, color=(0.78, 0.65, 0.45, 1), speed=0.004,
     texture_path=texture("jupiter.jpg"))
+
+# Saturn - halqali sayyora
+saturn, _ = create_planet(
+    "Saturn", radius=1.2, distance=34, color=(0.90, 0.82, 0.60, 1), speed=0.003,
+    texture_path=texture("saturn.jpg"))
+
+# O'q og'ishi (haqiqiy Saturnda 26.7 gradus). Halqa sayyoraga bog'langani uchun
+# sayyorani qiyshaytirish kifoya - halqa avtomatik ravishda u bilan qiyshayadi
+saturn.rotation_euler = (math.radians(26.7), 0.0, 0.0)
+
+# Halqa sayyora radiusidan tashqarida boshlanadi (1.2 -> 1.6 dan 2.8 gacha)
+create_ring(saturn, inner_radius=1.6, outer_radius=2.8,
+            texture_path=texture("saturn_ring.png"))
 
 
 # 5. YULDUZLI KOINOT FONI (minglab kichik Icosphere zarrachalari)
@@ -249,5 +396,5 @@ track_constraint.up_axis = 'UP_Y'                 # Kameraning tepa qismi
 bpy.context.scene.frame_start = 1
 bpy.context.scene.frame_end = 2000
 
-print("Koinot tizimi tayyor: Quyosh, Yer, Oy, Mars, Yupiter, "
+print("Koinot tizimi tayyor: Quyosh, Yer, Oy, Mars, Yupiter, halqali Saturn, "
       f"{STAR_COUNT} yulduz va Yerni kuzatuvchi kamera.")
