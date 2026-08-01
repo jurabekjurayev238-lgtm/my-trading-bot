@@ -116,6 +116,48 @@ Yerdan (12 birlik) taxminan 8 baravar qorong'iroq yoritiladi.
 
 > Sinovdan o'tgan: **Blender 4.2.9 LTS**, Linux x64, Cycles CPU.
 
+## 6. Video (animatsiya) render qilish
+
+Ikki bosqichda: avval kadrlar, keyin ularni videoga yig'ish.
+
+```
+# 1-bosqich: 216 ta PNG kadr (~40 daqiqa, Cycles CPU, 4 yadro)
+SOLAR_TEXTURE_FOLDER=/path/to/textures \
+blender --background --factory-startup \
+    --python blender/solar_system.py \
+    --python blender/render_animation.py -- --out ./anim
+
+# 2-bosqich: kadrlarni mp4 ga yig'ish (bir necha soniya)
+blender --background --factory-startup \
+    --python blender/encode_video.py -- --frames ./anim --out ./koinot.mp4 --fps 24
+```
+
+Tizimda `ffmpeg` bo'lishi shart emas — Blender o'zinikini ishlatadi.
+
+| Muhit o'zgaruvchisi | Vazifasi | Standart |
+|---|---|---|
+| `ANIM_SHOT_FRAMES` | Har bir rakursdagi kadrlar | `72` (24 fps da 3 soniya) |
+| `ANIM_FRAME_STEP` | Sahna vaqti qadami | `3` |
+| `ANIM_SAMPLES` | Cycles namunalari | `24` |
+| `ANIM_RES_X` / `ANIM_RES_Y` | O'lcham | `1280` / `720` |
+
+`ANIM_FRAME_STEP` nima uchun kerak: orbitalar sekin (Saturn kadriga atigi 0.003
+radian), shuning uchun har bir renderlangan kadrda sahna vaqtini 3 kadrga surib
+yuboramiz. Shunda kamroq kadr renderlab, ko'proq harakat olamiz.
+
+Birinchi marta sinab ko'rish uchun qisqa variant:
+
+```
+ANIM_SHOT_FRAMES=2 ... (bir necha soniyada tugaydi)
+```
+
+> **Eslatma:** Yer kuzatuv kamerasi Yerga bog'langan va Yerning o'z o'qi atrofida
+> aylanishi yo'q, shuning uchun bu rakursda Yer qimirlamaydi — harakat qiluvchi
+> narsalar: Oy, yulduzlar va sayyoralar. Bu kamera "Yer bilan yonma-yon uchayotgan
+> kema" effektini beradi. Agar Yerning o'z o'qi atrofida aylanishini istasangiz,
+> `create_planet` ichida orbitaga qo'yilgan driver'ning xuddi o'zini sayyoraning
+> o'ziga ham qo'yish kifoya.
+
 ## Sozlamalar
 
 Fayl boshidagi konstantalar:
