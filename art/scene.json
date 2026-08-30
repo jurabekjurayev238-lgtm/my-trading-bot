@@ -1,0 +1,29 @@
+{
+  "scene": {
+    "setting": "A surreal, fantasy cosmic landscape under a deep space sky.",
+    "lighting": "Ethereal and magical, with glows originating from the cosmic book and the river, mixing with distant nebulae light.",
+    "colors": "Rich blues, purples, golds, vibrant orange/pinks, and crystalline greens."
+  },
+  "main_subjects": {
+    "book": {
+      "appearance": "A colossal, ancient, golden-bound book, wide open.",
+      "content": "The pages are made of glowing constellations and swirling galaxies.",
+      "action": "A radiant waterfall of starlight pours directly from the spine and pages into a river below."
+    },
+    "scribe": {
+      "appearance": "An elderly, bearded figure (scholar or monk) in flowing robes.",
+      "action": "Sitting and writing with a quill that emits magical sparks into a small notebook.",
+      "perch": "Seated on a stylized, complex astrolabe or mechanical orbital device."
+    }
+  },
+  "environment_details": {
+    "river": "A winding river flowing through a canyon, made of two parallel streams: liquid gold and vibrant cosmic blue.",
+    "landscape": "A rocky canyon with prominent, large, iridescent crystal formations.",
+    "sky": "A detailed cosmos with a large spiral galaxy, distant planets, and a bright moon.",
+    "horizon": "A bright, warm orange/pink celestial sunrise/sunset opposite the cosmic waterfall."
+  },
+  "style": {
+    "genre": "High-fantasy concept art; epic digital painting.",
+    "technique": "Highly detailed with rich texture, dramatic lighting, and a vibrant, illustrative finish."
+  }
+}
