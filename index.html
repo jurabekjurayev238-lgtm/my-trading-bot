@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="uz" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dasturlash Studiyasi - Live Code Studio</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  // Tailwind CDN yuklanmagan bo'lsa (internet yo'q) sahifa ishlashda davom etsin
+  if (typeof tailwind !== 'undefined') {
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"Fira Code"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    };
+  } else {
+    // CDN yetib kelmadi — zaxira uslublarni yoqamiz
+    document.documentElement.classList.add('no-tailwind');
+  }
+</script>
+<style>
+  /* Tailwind yuklanmasa ham bo'limlar almashinuvi ishlashi uchun zaxira.
+     Tailwind mavjud bo'lganda bu qoida umuman qo'llanmaydi, shuning uchun
+     "hidden md:flex" kabi moslashuvchan sinflarga xalaqit bermaydi. */
+  .no-tailwind .hidden { display: none; }
+
+  /* O'zbekcha maxsus scrollbar bezaklari */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #090d16;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #233044;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #334460;
+  }
+  .code-editor {
+    tab-size: 2;
+    -moz-tab-size: 2;
+  }
+</style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+<!-- Yuqori Asosiy Menyu -->
+<header class="border-b border-slate-800 bg-slate-900/95 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-6 py-2.5 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-brand-500/25">
+      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      </svg>
+    </div>
+    <div>
+      <h1 class="font-bold text-base md:text-lg text-white flex items-center gap-2">
+        Dasturlash Studiyasi
+        <span class="text-[10px] uppercase font-semibold tracking-wider bg-brand-500/20 text-brand-300 border border-brand-500/30 px-2 py-0.5 rounded-full">v2.5</span>
+      </h1>
+      <p class="text-[11px] text-slate-400 hidden sm:block">Jonli kod muharriri, algoritmlar va tayyor shablonlar</p>
+    </div>
+  </div>
+
+  <!-- Bo'limlar Navigatsiyasi -->
+  <nav class="hidden md:flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+    <button onclick="switchMainTab('editor')" id="tab-btn-editor" class="nav-tab active px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-brand-600 text-white shadow-sm">
+      Jonli Muharrir
+    </button>
+    <button onclick="switchMainTab('visualizer')" id="tab-btn-visualizer" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-300 hover:text-white">
+      Algoritmlar
+    </button>
+    <button onclick="switchMainTab('snippets')" id="tab-btn-snippets" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-300 hover:text-white">
+      Kod Shablonlari
+    </button>
+    <button onclick="switchMainTab('tools')" id="tab-btn-tools" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-300 hover:text-white">
+      Dev Asboblar
+    </button>
+  </nav>
+
+  <!-- Amallar Tugmalari -->
+  <div class="flex items-center gap-2">
+    <button onclick="copyCurrentFullSource()" title="To'liq kodni nusxalash" class="px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white text-xs font-medium transition-colors flex items-center gap-1.5">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+      <span class="hidden sm:inline">Kodni Ko'chirish</span>
+    </button>
+    <button onclick="runCode()" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-1.5 active:scale-95">
+      <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <span>Ishga tushirish</span>
+    </button>
+  </div>
+</header>
+
+<!-- Mobil Qurilmalar uchun Tab menyusi -->
+<div class="flex md:hidden border-b border-slate-800 bg-slate-900 overflow-x-auto px-3 py-2 gap-2 text-xs">
+  <button onclick="switchMainTab('editor')" class="nav-tab active px-3 py-1.5 rounded-lg whitespace-nowrap bg-brand-600 text-white font-medium">Muharrir</button>
+  <button onclick="switchMainTab('visualizer')" class="nav-tab px-3 py-1.5 rounded-lg whitespace-nowrap text-slate-300 font-medium">Algoritmlar</button>
+  <button onclick="switchMainTab('snippets')" class="nav-tab px-3 py-1.5 rounded-lg whitespace-nowrap text-slate-300 font-medium">Shablonlar</button>
+  <button onclick="switchMainTab('tools')" class="nav-tab px-3 py-1.5 rounded-lg whitespace-nowrap text-slate-300 font-medium">Asboblar</button>
+</div>
+
+<main class="flex-1 flex flex-col overflow-hidden">
+
+  <!-- 1-BO'LIM: JONLI MUHARRIR -->
+  <section id="section-editor" class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+
+    <!-- Chap: Kod yozish paneli -->
+    <div class="w-full lg:w-1/2 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-950">
+
+      <!-- Tilni almashtirish tugmalari -->
+      <div class="flex items-center justify-between border-b border-slate-800 bg-slate-900/70 px-4 py-2">
+        <div class="flex items-center gap-1.5">
+          <button onclick="switchEditorLang('html')" id="lang-btn-html" class="lang-tab px-3 py-1 rounded text-xs font-mono font-medium flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            HTML
+          </button>
+          <button onclick="switchEditorLang('css')" id="lang-btn-css" class="lang-tab px-3 py-1 rounded text-xs font-mono font-medium flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+            CSS
+          </button>
+          <button onclick="switchEditorLang('js')" id="lang-btn-js" class="lang-tab px-3 py-1 rounded text-xs font-mono font-medium flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+            JS
+          </button>
+        </div>
+
+        <!-- Tayyor loyihalar tanlash -->
+        <div class="flex items-center gap-2">
+          <select onchange="loadPreset(this.value)" class="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+            <option value="">⚡ Loyiha andozasini tanlang...</option>
+            <option value="counter">Oddiy Hisoblagich (Counter App)</option>
+            <option value="todo">Rejalar Ro'yxati (Todo List)</option>
+            <option value="clock">Raqamli Soat (Digital Clock)</option>
+            <option value="cards">Mahsulot Kartochkalari (UI Cards)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="relative flex-1 min-h-[320px] lg:min-h-0 bg-[#0b1120]">
+        <!-- HTML Muharrir -->
+        <div id="wrapper-html" class="h-full flex">
+          <div class="select-none py-3 px-2 bg-slate-900/60 text-slate-600 font-mono text-xs text-right border-r border-slate-800 leading-6" id="line-numbers-html">1</div>
+          <textarea id="code-html" spellcheck="false" class="code-editor flex-1 p-3 bg-transparent text-amber-200 font-mono text-sm leading-6 resize-none focus:outline-none overflow-y-auto" onkeydown="handleEditorKeydown(event, this)"></textarea>
+        </div>
+
+        <!-- CSS Muharrir -->
+        <div id="wrapper-css" class="h-full flex hidden">
+          <div class="select-none py-3 px-2 bg-slate-900/60 text-slate-600 font-mono text-xs text-right border-r border-slate-800 leading-6" id="line-numbers-css">1</div>
+          <textarea id="code-css" spellcheck="false" class="code-editor flex-1 p-3 bg-transparent text-sky-200 font-mono text-sm leading-6 resize-none focus:outline-none overflow-y-auto" onkeydown="handleEditorKeydown(event, this)"></textarea>
+        </div>
+
+        <!-- JS Muharrir -->
+        <div id="wrapper-js" class="h-full flex hidden">
+          <div class="select-none py-3 px-2 bg-slate-900/60 text-slate-600 font-mono text-xs text-right border-r border-slate-800 leading-6" id="line-numbers-js">1</div>
+          <textarea id="code-js" spellcheck="false" class="code-editor flex-1 p-3 bg-transparent text-emerald-200 font-mono text-sm leading-6 resize-none focus:outline-none overflow-y-auto" onkeydown="handleEditorKeydown(event, this)"></textarea>
+        </div>
+      </div>
+
+      <!-- Muharrir tag qatori -->
+      <div class="border-t border-slate-800 bg-slate-900/80 px-4 py-2 flex items-center justify-between text-xs text-slate-400">
+        <span class="flex items-center gap-1.5 font-mono">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span> Muharrir tayyor
+        </span>
+        <span class="text-[11px] text-slate-500">Tugmalar: <kbd class="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700">Ctrl</kbd> + <kbd class="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700">Enter</kbd> (Ishga tushirish)</span>
+      </div>
+    </div>
+
+    <!-- O'ng: Jonli ko'rish va Konsol -->
+    <div class="w-full lg:w-1/2 flex flex-col bg-slate-900">
+      <div class="border-b border-slate-800 px-4 py-2 flex items-center justify-between bg-slate-900/90">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold tracking-wide uppercase text-slate-400">Natija (Jonli Ko'rinish)</span>
+          <span id="preview-indicator" class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Faol</span>
+        </div>
+        <button onclick="clearConsole()" class="text-xs text-slate-400 hover:text-slate-200 px-2.5 py-1 rounded bg-slate-800 border border-slate-700 transition">
+          Konsolni tozalash
+        </button>
+      </div>
+
+      <!-- Iframe Jonli Render -->
+      <div class="flex-1 bg-white relative">
+        <iframe id="live-preview" class="w-full h-full border-0 bg-white" sandbox="allow-scripts allow-modals"></iframe>
+      </div>
+
+      <!-- Konsol Qismi -->
+      <div class="h-44 border-t border-slate-800 bg-slate-950 flex flex-col font-mono text-xs">
+        <div class="px-4 py-1.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-slate-400 text-[11px]">
+          <span class="flex items-center gap-1.5 font-bold">
+            <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3" /></svg>
+            Konsol xabarlari (console.log)
+          </span>
+          <span id="log-count" class="text-slate-500">0 ta xabar</span>
+        </div>
+        <div id="console-logs" class="flex-1 p-3 overflow-y-auto space-y-1">
+          <div class="text-slate-500 italic text-[11px]">Konsol natijalari shu yerda ko'rinadi...</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2-BO'LIM: ALGORITMLAR VIZUALIZATSIYASI -->
+  <section id="section-visualizer" class="hidden flex-1 overflow-y-auto p-4 lg:p-8 max-w-6xl mx-auto w-full">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-white mb-1">Algoritmlar Vizual Laboratoriyasi</h2>
+      <p class="text-sm text-slate-400">Algoritm qanday ishlashini grafik animatsiyalar orqali bosqichma-bosqich kuzating.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Algoritmni tanlang</label>
+          <select id="algo-select" onchange="initSelectedAlgorithm()" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="bubble">Pufaksimon Saralash (Bubble Sort)</option>
+            <option value="binary">Ikkilik Qidiruv (Binary Search)</option>
+            <option value="fibonacci">Fibonachchi Ketma-ketligi</option>
+          </select>
+        </div>
+
+        <div id="algo-binary-controls" class="hidden space-y-2">
+          <label class="block text-xs font-semibold text-slate-300">Qidirilayotgan son:</label>
+          <input type="number" id="binary-target" value="42" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+
+        <div class="flex flex-col gap-2 pt-2">
+          <button onclick="startAlgorithm()" id="btn-algo-start" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm transition-all shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
+            Boshlash
+          </button>
+          <button onclick="resetAlgorithmData()" class="w-full py-2.5 rounded-xl border border-slate-700 hover:border-slate-600 text-slate-300 font-semibold text-sm transition-all">
+            Yangi Ma'lumot To'plami
+          </button>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-300 space-y-2">
+          <div class="font-semibold text-brand-400">Algoritm murakkabligi:</div>
+          <div id="algo-complexity" class="text-slate-400 leading-relaxed">
+            Vaqt: <span class="font-mono text-emerald-400">O(n²)</span> | Xotira: <span class="font-mono text-emerald-400">O(1)</span>
+          </div>
+          <p id="algo-description" class="text-slate-400 leading-relaxed text-[11px]">
+            Qo'shni juftliklar taqqoslanadi va kattalari o'ng tarafga surib boriladi.
+          </p>
+        </div>
+      </div>
+
+      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+          <h3 class="text-sm font-semibold text-slate-200">Vizual Maydon</h3>
+          <span id="algo-status-badge" class="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-md">Tayyor</span>
+        </div>
+        <div id="algo-canvas" class="flex-1 min-h-[300px] flex items-end justify-center gap-2 p-4 bg-slate-950/80 rounded-xl border border-slate-800/80 overflow-x-auto">
+        </div>
+        <div class="mt-4 p-3 bg-slate-950 border border-slate-800 rounded-xl font-mono text-xs text-slate-300 flex items-center justify-between">
+          <span id="algo-log-message">Boshlash uchun tugmani bosing.</span>
+          <span id="algo-counter" class="text-slate-500">Amallar: 0</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3-BO'LIM: AMALIY KOD SHABLONLARI -->
+  <section id="section-snippets" class="hidden flex-1 overflow-y-auto p-4 lg:p-8 max-w-6xl mx-auto w-full">
+    <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h2 class="text-2xl font-bold text-white mb-1">Amaliy Kod Shablonlari</h2>
+        <p class="text-sm text-slate-400">Python, JavaScript, C++ va SQL tillarida tayyor andozalar.</p>
+      </div>
+      <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 p-1.5 rounded-xl self-start">
+        <button onclick="filterSnippets('all', this)" class="snippet-tag active px-3 py-1 text-xs font-semibold rounded-lg bg-brand-600 text-white">Barchasi</button>
+        <button onclick="filterSnippets('python', this)" class="snippet-tag px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-white">Python</button>
+        <button onclick="filterSnippets('javascript', this)" class="snippet-tag px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-white">JavaScript</button>
+        <button onclick="filterSnippets('cpp', this)" class="snippet-tag px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-white">C++</button>
+        <button onclick="filterSnippets('sql', this)" class="snippet-tag px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-white">SQL</button>
+      </div>
+    </div>
+
+    <div id="snippets-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    </div>
+  </section>
+
+  <!-- 4-BO'LIM: DASTURCHI ASBOBLARI -->
+  <section id="section-tools" class="hidden flex-1 overflow-y-auto p-4 lg:p-8 max-w-5xl mx-auto w-full">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-white mb-1">Dasturchi Kunlik Asboblari</h2>
+      <p class="text-sm text-slate-400">Qulay JSON formatlagich, Base64 konverteri va xavfsiz token generatori.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- JSON Formatlagich -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-white text-sm flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> JSON Formatlash
+          </h3>
+          <button onclick="formatJSON()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1 rounded-lg border border-slate-700">Formatlash</button>
+        </div>
+        <textarea id="tool-json-input" placeholder='{"salom": "dunyo", "sonlar": [1, 2, 3]}' class="w-full h-44 bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-slate-300 resize-none focus:outline-none focus:border-brand-500"></textarea>
+        <div id="json-status" class="text-xs text-slate-500">Tayyor.</div>
+      </div>
+
+      <!-- Base64 Konverter -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-white text-sm flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-brand-400"></span> Base64 Shifrlash / Qaytarish
+          </h3>
+          <div class="flex gap-1.5">
+            <button onclick="base64Action('encode')" class="text-xs bg-brand-600 hover:bg-brand-500 text-white px-2.5 py-1 rounded-lg">Encode</button>
+            <button onclick="base64Action('decode')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg border border-slate-700">Decode</button>
+          </div>
+        </div>
+        <textarea id="tool-base64-input" placeholder="Matnni shu yerga kiriting..." class="w-full h-44 bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-slate-300 resize-none focus:outline-none focus:border-brand-500"></textarea>
+        <div id="base64-status" class="text-xs text-slate-500">Natijani ko'rish uchun yuqoridagi tugmani bosing.</div>
+      </div>
+
+      <!-- Parol va API kalit yaratuvchi -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col space-y-3">
+        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-yellow-400"></span> Xavfsiz Parol / Token Generator
+        </h3>
+        <div class="flex items-center gap-2">
+          <input type="text" id="generated-token" readonly class="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-xs text-yellow-300 focus:outline-none">
+          <button onclick="copyGeneratedToken()" class="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold">Nusxa</button>
+        </div>
+        <button onclick="generateNewToken()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-semibold">Yangi Kalit Yaratish</button>
+      </div>
+
+      <!-- RegEx Tekshiruvchi -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col space-y-3">
+        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-sky-400"></span> RegEx (Muntazam Ifoda) Tekshirgich
+        </h3>
+        <input type="text" id="regex-pattern" placeholder="Muntazam ifoda: masalan \d+" value="[0-9]+" oninput="testRegex()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 font-mono text-xs text-sky-300 focus:outline-none">
+        <input type="text" id="regex-string" placeholder="Tekshiriladigan matn..." value="Dasturlash 2026 yilda juda ommabop!" oninput="testRegex()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 font-mono text-xs text-slate-300 focus:outline-none">
+        <div id="regex-result" class="text-xs text-slate-400">Natija: <span class="text-emerald-400 font-bold font-mono">2026</span></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast-box" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+<script>
+// 1. Tayyor shablonlar
+const defaultTemplates = {
+  counter: {
+    html: `<div class="card">
+  <h2>Hisoblagich Loyihasi</h2>
+  <div class="count-display" id="count">0</div>
+  <div class="buttons">
+    <button onclick="update(-1)">-1</button>
+    <button onclick="reset()">Tiklash</button>
+    <button onclick="update(1)">+1</button>
+  </div>
+</div>`,
+    css: `body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #1e1b4b, #0f172a);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+.card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+.count-display {
+  font-size: 4.5rem;
+  font-weight: 800;
+  color: #818cf8;
+  margin: 1rem 0;
+}
+.buttons button {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.4rem;
+  font-size: 1rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  margin: 0 0.3rem;
+  transition: all 0.2s;
+}
+.buttons button:hover {
+  background: #6366f1;
+  transform: translateY(-2px);
+}`,
+    js: `let count = 0;
+const display = document.getElementById('count');
+
+function update(amount) {
+  count += amount;
+  display.innerText = count;
+  console.log("Yangi hisob:", count);
+}
+
+function reset() {
+  count = 0;
+  display.innerText = count;
+  console.log("Hisoblagich nolga tushirildi");
+}`
+  },
+
+  todo: {
+    html: `<div class="todo-card">
+  <h2>Vazifalar Rejasi</h2>
+  <div class="row">
+    <input type="text" id="task-input" placeholder="Vazifa nomi...">
+    <button onclick="addTask()">Qo'shish</button>
+  </div>
+  <ul id="task-list"></ul>
+</div>`,
+    css: `body {
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #f8fafc;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+.todo-card {
+  width: 90%;
+  max-width: 380px;
+  background: #1e293b;
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid #334155;
+}
+.row { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+input {
+  flex: 1; padding: 0.6rem; border-radius: 0.5rem;
+  border: 1px solid #475569; background: #0f172a; color: white;
+}
+button {
+  background: #10b981; color: white; border: none;
+  padding: 0.6rem 1rem; border-radius: 0.5rem; cursor: pointer;
+}
+ul { list-style: none; padding: 0; margin: 0; }
+li {
+  padding: 0.75rem; background: #334155; margin-bottom: 0.5rem;
+  border-radius: 0.5rem; display: flex; justify-content: space-between;
+}`,
+    js: `function addTask() {
+  const input = document.getElementById('task-input');
+  if (!input.value.trim()) return;
+
+  const li = document.createElement('li');
+  const label = document.createElement('span');
+  label.textContent = input.value;
+
+  const del = document.createElement('button');
+  del.textContent = '✕';
+  del.style.cssText = 'background:#ef4444;color:white;border:none;padding:2px 6px;border-radius:4px;cursor:pointer;';
+  del.onclick = () => li.remove();
+
+  li.appendChild(label);
+  li.appendChild(del);
+  document.getElementById('task-list').appendChild(li);
+
+  console.log("Yangi vazifa:", input.value);
+  input.value = '';
+}`
+  },
+
+  clock: {
+    html: `<div class="clock-box">
+  <div id="time">00:00:00</div>
+  <div id="date">Bugungi sana</div>
+</div>`,
+    css: `body {
+  margin: 0;
+  background: #020617;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-family: monospace;
+}
+.clock-box {
+  text-align: center;
+  background: #0f172a;
+  border: 2px solid #38bdf8;
+  padding: 3rem 4rem;
+  border-radius: 20px;
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
+}
+#time { font-size: 4rem; font-weight: bold; color: #38bdf8; }
+#date { color: #94a3b8; margin-top: 1rem; font-size: 1.1rem; }`,
+    js: `function tick() {
+  const now = new Date();
+  document.getElementById('time').textContent = now.toLocaleTimeString();
+  document.getElementById('date').textContent = now.toLocaleDateString();
+}
+
+setInterval(tick, 1000);
+tick();
+console.log("Soat ishga tushdi!");`
+  },
+
+  cards: {
+    html: `<div class="grid">
+  <div class="item">
+    <span class="tag">Dasturlash</span>
+    <h3>Frontend Kursi</h3>
+    <p>HTML5, CSS3, Tailwind va JavaScript.</p>
+    <button>O'rganish</button>
+  </div>
+  <div class="item pro">
+    <span class="tag">Backend</span>
+    <h3>Python va AI</h3>
+    <p>FastAPI, Django hamda Sun'iy Intellekt.</p>
+    <button>Boshlash</button>
+  </div>
+</div>`,
+    css: `body {
+  margin: 0; background: #0b0f19; font-family: system-ui, sans-serif;
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh;
+}
+.grid { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.item {
+  background: #161f30; border: 1px solid #283548; padding: 2rem;
+  border-radius: 1rem; width: 220px; color: white;
+}
+.item.pro { border-color: #6366f1; }
+.tag { font-size: 0.75rem; color: #818cf8; }
+h3 { margin: 0.5rem 0; }
+p { color: #94a3b8; font-size: 0.85rem; }
+button {
+  width: 100%; background: #4f46e5; color: white; border: none;
+  padding: 0.5rem; border-radius: 0.5rem; cursor: pointer; margin-top: 1rem;
+}`,
+    js: `console.log("Kartochkalar namoyish etildi!");`
+  }
+};
+
+const snippetsDatabase = [
+  {
+    lang: 'python',
+    title: 'Tezkor API So\'rovi (FastAPI)',
+    desc: 'Zamonaviy va yengil backend API yaratish.',
+    code: `from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "Salom, Dasturlash Studiyasi!"}
+
+@app.get("/items/{item_id}")
+def get_item(item_id: int):
+    return {"item_id": item_id, "active": True}`
+  },
+  {
+    lang: 'python',
+    title: 'Fayldan Ma\'lumot O\'qish & Yozish',
+    desc: 'Xavfsiz kontekst menejeri orqali fayl boshqaruvi.',
+    code: `# Faylga yozish
+with open('fayl.txt', 'w', encoding='utf-8') as f:
+    f.write("Dasturlash sirlari va amaliyot\\n")
+
+# Fayldan o'qish
+with open('fayl.txt', 'r', encoding='utf-8') as f:
+    matn = f.read()
+    print("O'qilgan matn:", matn)`
+  },
+  {
+    lang: 'javascript',
+    title: 'Asinxron Fetch So\'rovi (Async/Await)',
+    desc: 'Tashqi API bilan asinxron ma\'lumot almashish.',
+    code: `async function fetchData(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(\`Xatolik: \${res.status}\`);
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error("So'rovda xato:", err.message);
+  }
+}`
+  },
+  {
+    lang: 'javascript',
+    title: 'Massivlarni Filtrlash (Map, Filter, Reduce)',
+    desc: 'Array elementlari bilan samarali ishlash usullari.',
+    code: `const numbers = [10, 25, 30, 45, 50];
+
+// 20 dan kattalarini saralab olish
+const filtered = numbers.filter(n => n > 20);
+
+// Har bir son kvadratini hisoblash
+const squares = filtered.map(n => n * n);
+
+// Yig'indini hisoblash
+const sum = numbers.reduce((acc, val) => acc + val, 0);
+
+console.log({ filtered, squares, sum });`
+  },
+  {
+    lang: 'cpp',
+    title: 'Ikkilik Qidiruv (Binary Search)',
+    desc: 'Tartiblangan vektor ichida O(log n) tezlikda qidirish.',
+    code: `#include <iostream>
+#include <vector>
+
+int binarySearch(const std::vector<int>& arr, int target) {
+    int left = 0, right = arr.size() - 1;
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        if (arr[mid] == target) return mid;
+        if (arr[mid] < target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return -1;
+}`
+  },
+  {
+    lang: 'sql',
+    title: 'Jadvallarni Bog\'lash (JOIN va GROUP BY)',
+    desc: 'Foydalanuvchilar va buyurtmalar jadvalini birlashtirish.',
+    code: `SELECT
+    u.id,
+    u.username,
+    COUNT(o.id) AS total_orders,
+    SUM(o.amount) AS total_spent
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.status = 'active'
+GROUP BY u.id, u.username
+HAVING total_spent > 1000
+ORDER BY total_spent DESC;`
+  }
+];
+
+const STORAGE_KEY = 'ds-studio-v1';
+const EDITOR_LANGS = ['html', 'css', 'js'];
+
+// Har bir til uchun faol / nofaol tab ko'rinishi
+const LANG_TAB_STYLES = {
+  html: { active: 'bg-slate-800 text-amber-400 border border-amber-500/30', idle: 'text-slate-400 hover:text-slate-200' },
+  css:  { active: 'bg-slate-800 text-sky-400 border border-sky-500/30',     idle: 'text-slate-400 hover:text-slate-200' },
+  js:   { active: 'bg-slate-800 text-yellow-400 border border-yellow-500/30', idle: 'text-slate-400 hover:text-slate-200' }
+};
+
+const LANG_TAB_BASE = 'lang-tab px-3 py-1 rounded text-xs font-mono font-medium flex items-center gap-1.5';
+
+let currentTab = 'editor';
+let currentEditorLang = 'html';
+let logCounter = 0;
+
+function switchMainTab(tabId) {
+  currentTab = tabId;
+
+  document.querySelectorAll('section[id^="section-"]').forEach(s => s.classList.add('hidden'));
+  document.getElementById(`section-${tabId}`).classList.remove('hidden');
+
+  document.querySelectorAll('.nav-tab').forEach(btn => {
+    btn.classList.remove('bg-brand-600', 'text-white');
+    btn.classList.add('text-slate-300');
+  });
+
+  document.querySelectorAll(`[onclick="switchMainTab('${tabId}')"]`).forEach(btn => {
+    btn.classList.add('bg-brand-600', 'text-white');
+    btn.classList.remove('text-slate-300');
+  });
+
+  if (tabId === 'visualizer') initSelectedAlgorithm();
+}
+
+function switchEditorLang(lang) {
+  currentEditorLang = lang;
+
+  EDITOR_LANGS.forEach(l => {
+    const isActive = l === lang;
+    document.getElementById(`wrapper-${l}`).classList.toggle('hidden', !isActive);
+    const style = LANG_TAB_STYLES[l];
+    document.getElementById(`lang-btn-${l}`).className =
+      `${LANG_TAB_BASE} ${isActive ? style.active : style.idle}`;
+  });
+
+  updateLineNumbers(lang);
+}
+
+// Muharrir chap tomonidagi qator raqamlarini matnga moslash
+function updateLineNumbers(lang) {
+  const textarea = document.getElementById(`code-${lang}`);
+  const gutter = document.getElementById(`line-numbers-${lang}`);
+  if (!textarea || !gutter) return;
+
+  const total = textarea.value.split('\n').length;
+  const numbers = [];
+  for (let i = 1; i <= total; i++) numbers.push(i);
+  gutter.innerHTML = numbers.join('<br>');
+}
+
+function updateAllLineNumbers() {
+  EDITOR_LANGS.forEach(updateLineNumbers);
+}
+
+function getEditorState() {
+  return {
+    html: document.getElementById('code-html').value,
+    css: document.getElementById('code-css').value,
+    js: document.getElementById('code-js').value
+  };
+}
+
+// Yozilgan kodni brauzer xotirasida saqlash
+function saveEditorState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(getEditorState()));
+  } catch (e) {
+    // Maxfiy rejimda localStorage ishlamasligi mumkin — jimgina o'tkazib yuboramiz
+  }
+}
+
+function loadEditorState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return {
+      html: typeof parsed.html === 'string' ? parsed.html : '',
+      css: typeof parsed.css === 'string' ? parsed.css : '',
+      js: typeof parsed.js === 'string' ? parsed.js : ''
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+let saveTimer = null;
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveEditorState, 300);
+}
+
+function runCode() {
+  const html = document.getElementById('code-html').value;
+  const css = document.getElementById('code-css').value;
+  const js = document.getElementById('code-js').value;
+
+  const consoleOverrideScript = `
+    <script>
+      const _log = console.log;
+      const _err = console.error;
+      const _warn = console.warn;
+
+      window.addEventListener('error', function(e) {
+        window.parent.postMessage({ type: 'CONSOLE', level: 'error', args: [e.message] }, '*');
+      });
+
+      console.log = function(...args) {
+        window.parent.postMessage({ type: 'CONSOLE', level: 'log', args: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)) }, '*');
+        _log.apply(console, args);
+      };
+      console.error = function(...args) {
+        window.parent.postMessage({ type: 'CONSOLE', level: 'error', args: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)) }, '*');
+        _err.apply(console, args);
+      };
+      console.warn = function(...args) {
+        window.parent.postMessage({ type: 'CONSOLE', level: 'warn', args: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)) }, '*');
+        _warn.apply(console, args);
+      };
+    <\/script>
+  `;
+
+  const source = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>${css}</style>
+      ${consoleOverrideScript}
+    </head>
+    <body>
+      ${html}
+      <script>
+        try {
+${js}
+        } catch(err) {
+          console.error("Xatolik: " + err.message);
+        }
+      <\/script>
+    </body>
+    </html>
+  `;
+
+  const previewFrame = document.getElementById('live-preview');
+  previewFrame.srcdoc = source;
+
+  showToast("Kod muvaffaqiyatli ishga tushirildi!", "success");
+}
+
+window.addEventListener('message', (event) => {
+  // Faqat jonli ko'rish iframe'idan kelgan xabarlarni qabul qilamiz
+  const previewFrame = document.getElementById('live-preview');
+  if (!previewFrame || event.source !== previewFrame.contentWindow) return;
+
+  if (event.data && event.data.type === 'CONSOLE') {
+    const { level, args } = event.data;
+    appendConsoleLog(level, Array.isArray(args) ? args.join(' ') : String(args));
+  }
+});
+
+function appendConsoleLog(level, message) {
+  const logsContainer = document.getElementById('console-logs');
+  logCounter++;
+  document.getElementById('log-count').textContent = `${logCounter} ta xabar`;
+
+  const line = document.createElement('div');
+  line.className = "flex items-start gap-2 py-0.5 border-b border-slate-900";
+
+  let colorClass = "text-slate-300";
+  let icon = "❯";
+
+  if (level === 'error') {
+    colorClass = "text-rose-400 bg-rose-950/30 px-1 rounded";
+    icon = "✕";
+  } else if (level === 'warn') {
+    colorClass = "text-amber-400 bg-amber-950/30 px-1 rounded";
+    icon = "⚠";
+  }
+
+  line.innerHTML = `<span class="text-slate-600 select-none">${icon}</span> <span class="${colorClass}">${escapeHtml(message)}</span>`;
+  logsContainer.appendChild(line);
+  logsContainer.scrollTop = logsContainer.scrollHeight;
+}
+
+function clearConsole() {
+  document.getElementById('console-logs').innerHTML = '';
+  logCounter = 0;
+  document.getElementById('log-count').textContent = '0 ta xabar';
+  showToast("Konsol tozalandi", "info");
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function handleEditorKeydown(e, textarea) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    textarea.value = textarea.value.substring(0, start) + "  " + textarea.value.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + 2;
+    updateLineNumbers(currentEditorLang);
+    scheduleSave();
+  }
+}
+
+// Ctrl/Cmd + Enter sahifaning istalgan joyidan ishlaydi
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    runCode();
+  }
+});
+
+function loadPreset(key) {
+  if (!key || !defaultTemplates[key]) return;
+  const preset = defaultTemplates[key];
+  document.getElementById('code-html').value = preset.html;
+  document.getElementById('code-css').value = preset.css;
+  document.getElementById('code-js').value = preset.js;
+  updateAllLineNumbers();
+  saveEditorState();
+  runCode();
+  showToast(`'${key}' shabloni yuklandi`, "info");
+}
+
+function copyCurrentFullSource() {
+  const { html, css, js } = getEditorState();
+  const full = `<!-- HTML -->\n${html}\n\n/* CSS */\n${css}\n\n// JAVASCRIPT\n${js}`;
+  navigator.clipboard.writeText(full);
+  showToast("Tahrirlangan kod nusxalandi!", "success");
+}
+
+let algoData = [];
+let isAlgoRunning = false;
+
+function initSelectedAlgorithm() {
+  const type = document.getElementById('algo-select').value;
+  const binaryControls = document.getElementById('algo-binary-controls');
+  const desc = document.getElementById('algo-description');
+  const comp = document.getElementById('algo-complexity');
+
+  if (type === 'binary') {
+    binaryControls.classList.remove('hidden');
+    comp.innerHTML = 'Vaqt: <span class="font-mono text-emerald-400">O(log n)</span> | Xotira: <span class="font-mono text-emerald-400">O(1)</span>';
+    desc.textContent = "Tartiblangan massiv o'rtasidagi element bilan solishtirib, qidiruv maydonini ikki barobarga qisqartiradi.";
+  } else if (type === 'fibonacci') {
+    binaryControls.classList.add('hidden');
+    comp.innerHTML = 'Vaqt: <span class="font-mono text-emerald-400">O(n)</span> | Xotira: <span class="font-mono text-emerald-400">O(n)</span>';
+    desc.textContent = "Har bir yangi son o'zidan oldingi ikki sonning yig'indisidan hosil bo'ladi (0, 1, 1, 2, 3, 5, 8...).";
+  } else {
+    binaryControls.classList.add('hidden');
+    comp.innerHTML = 'Vaqt: <span class="font-mono text-emerald-400">O(n²)</span> | Xotira: <span class="font-mono text-emerald-400">O(1)</span>';
+    desc.textContent = "Qo'shni elementlarni taqqoslab, katta elementlarni pufak kabi oxiriga chiqaradi.";
+  }
+
+  resetAlgorithmData();
+}
+
+function resetAlgorithmData() {
+  if (isAlgoRunning) return;
+
+  const type = document.getElementById('algo-select').value;
+  const canvas = document.getElementById('algo-canvas');
+  canvas.innerHTML = '';
+  algoData = [];
+
+  if (type === 'bubble') {
+    for (let i = 0; i < 14; i++) {
+      algoData.push(Math.floor(Math.random() * 80) + 15);
+    }
+    renderBars(algoData);
+  } else if (type === 'binary') {
+    algoData = [10, 16, 22, 29, 34, 42, 50, 58, 64, 71, 80, 89, 95];
+    renderBars(algoData);
+  } else if (type === 'fibonacci') {
+    algoData = [0, 1];
+    renderFibonacciNodes(algoData);
+  }
+
+  document.getElementById('algo-counter').textContent = "Amallar: 0";
+  document.getElementById('algo-log-message').textContent = "Boshlash uchun 'Boshlash' tugmasini bosing.";
+  document.getElementById('algo-status-badge').textContent = "Tayyor";
+  document.getElementById('algo-status-badge').className = "text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-md";
+}
+
+const BAR_BASE_CLASS = 'w-7 md:w-9 rounded-t-lg transition-all duration-200 flex items-center justify-center text-[10px] font-mono font-bold pb-1';
+
+function renderBars(arr) {
+  const canvas = document.getElementById('algo-canvas');
+  canvas.innerHTML = '';
+  canvas.className = 'flex-1 min-h-[300px] flex items-end justify-center gap-2 p-4 bg-slate-950/80 rounded-xl border border-slate-800/80 overflow-x-auto';
+
+  arr.forEach((val, idx) => {
+    const bar = document.createElement('div');
+    bar.id = `bar-${idx}`;
+    bar.style.height = `${val * 2.5}px`;
+    bar.className = `${BAR_BASE_CLASS} bg-brand-500 text-white`;
+    bar.textContent = val;
+    canvas.appendChild(bar);
+  });
+}
+
+function renderFibonacciNodes(arr) {
+  const canvas = document.getElementById('algo-canvas');
+  canvas.innerHTML = '';
+  canvas.className = 'flex-1 min-h-[300px] flex items-center justify-center flex-wrap gap-2 p-4 bg-slate-950/80 rounded-xl border border-slate-800/80';
+
+  arr.forEach(val => {
+    const node = document.createElement('div');
+    node.className = 'w-12 h-12 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center font-mono text-sm font-bold text-indigo-200';
+    node.textContent = val;
+    canvas.appendChild(node);
+  });
+}
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function startAlgorithm() {
+  if (isAlgoRunning) return;
+  isAlgoRunning = true;
+
+  document.getElementById('btn-algo-start').disabled = true;
+  document.getElementById('btn-algo-start').classList.add('opacity-50');
+  document.getElementById('algo-status-badge').textContent = "Ishlamoqda...";
+  document.getElementById('algo-status-badge').className = "text-xs text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20";
+
+  const type = document.getElementById('algo-select').value;
+
+  if (type === 'bubble') {
+    await runBubbleSort();
+  } else if (type === 'binary') {
+    await runBinarySearch();
+  } else if (type === 'fibonacci') {
+    await runFibonacci();
+  }
+
+  isAlgoRunning = false;
+  document.getElementById('btn-algo-start').disabled = false;
+  document.getElementById('btn-algo-start').classList.remove('opacity-50');
+  document.getElementById('algo-status-badge').textContent = "Tugadi";
+  document.getElementById('algo-status-badge').className = "text-xs text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20";
+}
+
+async function runBubbleSort() {
+  const n = algoData.length;
+  let comparisons = 0;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n - i - 1; j++) {
+      comparisons++;
+      document.getElementById('algo-counter').textContent = `Taqqoslashlar: ${comparisons}`;
+
+      const bar1 = document.getElementById(`bar-${j}`);
+      const bar2 = document.getElementById(`bar-${j + 1}`);
+
+      // Rangni className orqali to'liq almashtiramiz: ikkinchi bg-* sinfini
+      // ustiga qo'shish Tailwind kaskadida ishlamaydi (bg-brand-500 ustun keladi)
+      bar1.className = `${BAR_BASE_CLASS} bg-amber-400 text-slate-950`;
+      bar2.className = `${BAR_BASE_CLASS} bg-amber-400 text-slate-950`;
+      document.getElementById('algo-log-message').textContent = `Taqqoslash: ${algoData[j]} va ${algoData[j + 1]}`;
+
+      await sleep(150);
+
+      if (algoData[j] > algoData[j + 1]) {
+        let temp = algoData[j];
+        algoData[j] = algoData[j + 1];
+        algoData[j + 1] = temp;
+
+        bar1.style.height = `${algoData[j] * 2.5}px`;
+        bar1.textContent = algoData[j];
+        bar2.style.height = `${algoData[j + 1] * 2.5}px`;
+        bar2.textContent = algoData[j + 1];
+
+        bar1.className = `${BAR_BASE_CLASS} bg-rose-500 text-white`;
+        bar2.className = `${BAR_BASE_CLASS} bg-rose-500 text-white`;
+        // 200ms rang o'tishi tugashi uchun almashinuv rangi biroz uzoqroq turadi
+        await sleep(250);
+      }
+
+      bar1.className = `${BAR_BASE_CLASS} bg-brand-500 text-white`;
+      bar2.className = `${BAR_BASE_CLASS} bg-brand-500 text-white`;
+    }
+
+    const sortedBar = document.getElementById(`bar-${n - i - 1}`);
+    if (sortedBar) sortedBar.className = `${BAR_BASE_CLASS} bg-emerald-500 text-white`;
+  }
+
+  document.getElementById('algo-log-message').textContent = "Saralash muvaffaqiyatli yakunlandi!";
+}
+
+async function runBinarySearch() {
+  const target = parseInt(document.getElementById('binary-target').value, 10);
+  let left = 0;
+  let right = algoData.length - 1;
+  let steps = 0;
+
+  if (Number.isNaN(target)) {
+    document.getElementById('algo-log-message').textContent = "Avval qidirilayotgan sonni kiriting.";
+    return;
+  }
+
+  while (left <= right) {
+    steps++;
+    document.getElementById('algo-counter').textContent = `Qadamlar: ${steps}`;
+
+    const mid = Math.floor((left + right) / 2);
+
+    for (let i = 0; i < algoData.length; i++) {
+      const b = document.getElementById(`bar-${i}`);
+      if (i >= left && i <= right) {
+        b.className = `${BAR_BASE_CLASS} bg-brand-500 text-white`;
+      } else {
+        b.className = `${BAR_BASE_CLASS} bg-slate-800 opacity-30 text-slate-500`;
+      }
+    }
+
+    const midBar = document.getElementById(`bar-${mid}`);
+    midBar.className = `${BAR_BASE_CLASS} bg-amber-400 text-slate-950`;
+    document.getElementById('algo-log-message').textContent = `O'rta element (${algoData[mid]}) maqsad (${target}) bilan solishtirilmoqda...`;
+
+    await sleep(600);
+
+    if (algoData[mid] === target) {
+      midBar.className = `${BAR_BASE_CLASS} bg-emerald-400 scale-110 text-slate-950`;
+      document.getElementById('algo-log-message').textContent = `Topildi! Indeks: ${mid}, Qiymat: ${target}`;
+      return;
+    }
+
+    if (algoData[mid] < target) {
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+
+  document.getElementById('algo-log-message').textContent = `Qiymat (${target}) massivdan topilmadi.`;
+}
+
+async function runFibonacci() {
+  const canvas = document.getElementById('algo-canvas');
+  canvas.className = 'flex-1 min-h-[300px] flex items-center justify-center flex-wrap gap-2 p-4 bg-slate-950/80 rounded-xl border border-slate-800/80';
+  canvas.innerHTML = '';
+
+  let seq = [0, 1];
+  renderFibonacciNodes(seq);
+
+  for (let i = 0; i < 12; i++) {
+    const prev1 = seq[seq.length - 1];
+    const prev2 = seq[seq.length - 2];
+    const nextVal = prev1 + prev2;
+    seq.push(nextVal);
+
+    document.getElementById('algo-counter').textContent = `Hosil qilingan: ${seq.length} ta son`;
+    document.getElementById('algo-log-message').textContent = `${prev2} + ${prev1} = ${nextVal}`;
+
+    const node = document.createElement('div');
+    node.className = 'w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center font-mono text-xs font-bold text-emerald-300';
+    node.textContent = nextVal;
+    canvas.appendChild(node);
+
+    await sleep(400);
+  }
+
+  document.getElementById('algo-log-message').textContent = "Fibonachchi sonlari to'liq hosil qilindi.";
+}
+
+function renderSnippets(list) {
+  const container = document.getElementById('snippets-grid');
+  container.innerHTML = '';
+
+  list.forEach(item => {
+    // Filtrlangan ro'yxatda ham to'g'ri kod nusxalanishi uchun asl indeksdan foydalanamiz
+    const sourceIndex = snippetsDatabase.indexOf(item);
+
+    const card = document.createElement('div');
+    card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition-colors";
+
+    const badgeColors = {
+      python: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      javascript: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+      cpp: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+      sql: 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+    };
+
+    card.innerHTML = `
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border ${badgeColors[item.lang] || 'bg-slate-800 text-slate-300 border-slate-700'}">
+            ${item.lang}
+          </span>
+          <button onclick="copySnippetCode(${sourceIndex})" class="text-xs text-slate-400 hover:text-white flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            Nusxa olish
+          </button>
+        </div>
+        <h4 class="font-bold text-white text-base mb-1">${escapeHtml(item.title)}</h4>
+        <p class="text-xs text-slate-400 mb-3">${escapeHtml(item.desc)}</p>
+      </div>
+      <pre class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 font-mono text-xs text-slate-300 overflow-x-auto"><code>${escapeHtml(item.code)}</code></pre>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function filterSnippets(category, button) {
+  document.querySelectorAll('.snippet-tag').forEach(b => {
+    b.classList.remove('bg-brand-600', 'text-white');
+    b.classList.add('text-slate-400');
+  });
+
+  if (button) {
+    button.classList.add('bg-brand-600', 'text-white');
+    button.classList.remove('text-slate-400');
+  }
+
+  if (category === 'all') {
+    renderSnippets(snippetsDatabase);
+  } else {
+    const filtered = snippetsDatabase.filter(s => s.lang === category);
+    renderSnippets(filtered);
+  }
+}
+
+function copySnippetCode(idx) {
+  const snippet = snippetsDatabase[idx];
+  if (!snippet) return;
+  navigator.clipboard.writeText(snippet.code);
+  showToast("Kod xotiraga nusxalandi!", "success");
+}
+
+// Yordamchi asboblar funksiyalari
+function formatJSON() {
+  const input = document.getElementById('tool-json-input');
+  const status = document.getElementById('json-status');
+  try {
+    const parsed = JSON.parse(input.value);
+    input.value = JSON.stringify(parsed, null, 2);
+    status.innerHTML = '<span class="text-emerald-400">To\'g\'ri JSON formatlandi!</span>';
+  } catch (e) {
+    status.innerHTML = `<span class="text-rose-400">JSON xatosi: ${escapeHtml(e.message)}</span>`;
+  }
+}
+
+function base64Action(type) {
+  const input = document.getElementById('tool-base64-input');
+  const status = document.getElementById('base64-status');
+  try {
+    if (type === 'encode') {
+      input.value = btoa(unescape(encodeURIComponent(input.value)));
+      status.innerHTML = '<span class="text-emerald-400">Base64 formatiga o\'tkazildi.</span>';
+    } else {
+      input.value = decodeURIComponent(escape(atob(input.value)));
+      status.innerHTML = '<span class="text-emerald-400">Matn holatiga qaytarildi.</span>';
+    }
+  } catch (e) {
+    status.innerHTML = `<span class="text-rose-400">Xatolik: ${escapeHtml(e.message)}</span>`;
+  }
+}
+
+function generateNewToken() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+';
+  const length = 32;
+
+  // Kriptografik xavfsiz tasodifiy sonlar (Math.random() bu ish uchun yaroqsiz)
+  const randomValues = new Uint32Array(length);
+  crypto.getRandomValues(randomValues);
+
+  // Bir tekis taqsimot uchun chetdagi qiymatlarni rad etamiz
+  const limit = Math.floor(4294967296 / chars.length) * chars.length;
+
+  let token = 'sk_live_';
+  for (let i = 0; i < length; i++) {
+    let value = randomValues[i];
+    while (value >= limit) {
+      const retry = new Uint32Array(1);
+      crypto.getRandomValues(retry);
+      value = retry[0];
+    }
+    token += chars.charAt(value % chars.length);
+  }
+
+  document.getElementById('generated-token').value = token;
+  showToast("Yangi xavfsiz token yaratildi", "info");
+}
+
+function copyGeneratedToken() {
+  const val = document.getElementById('generated-token').value;
+  if (!val) return;
+  navigator.clipboard.writeText(val);
+  showToast("Token nusxalandi!", "success");
+}
+
+function testRegex() {
+  const pat = document.getElementById('regex-pattern').value;
+  const str = document.getElementById('regex-string').value;
+  const res = document.getElementById('regex-result');
+
+  try {
+    const reg = new RegExp(pat, 'g');
+    const matches = str.match(reg);
+    if (matches) {
+      res.innerHTML = `Mosliklar: <span class="text-emerald-400 font-bold font-mono">${escapeHtml(matches.join(', '))}</span>`;
+    } else {
+      res.innerHTML = `<span class="text-slate-500">Moslik topilmadi.</span>`;
+    }
+  } catch (e) {
+    res.innerHTML = `<span class="text-rose-400">RegEx xatosi: ${escapeHtml(e.message)}</span>`;
+  }
+}
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-box');
+  const toast = document.createElement('div');
+
+  const colors = {
+    success: 'bg-emerald-600 text-white border-emerald-500',
+    info: 'bg-slate-800 text-slate-100 border-slate-700',
+    error: 'bg-rose-600 text-white border-rose-500'
+  };
+
+  toast.className = `${colors[type] || colors.info} border px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto`;
+  toast.innerHTML = `
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <span>${escapeHtml(message)}</span>
+  `;
+
+  container.appendChild(toast);
+
+  setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+  setTimeout(() => {
+    toast.classList.add('opacity-0', 'translate-y-2');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Boshlang'ich yuklash
+window.addEventListener('DOMContentLoaded', () => {
+  EDITOR_LANGS.forEach(lang => {
+    document.getElementById(`code-${lang}`).addEventListener('input', () => {
+      updateLineNumbers(lang);
+      scheduleSave();
+    });
+  });
+
+  switchEditorLang('html');
+
+  const saved = loadEditorState();
+  if (saved) {
+    document.getElementById('code-html').value = saved.html;
+    document.getElementById('code-css').value = saved.css;
+    document.getElementById('code-js').value = saved.js;
+    updateAllLineNumbers();
+    runCode();
+  } else {
+    loadPreset('counter');
+  }
+
+  renderSnippets(snippetsDatabase);
+  generateNewToken();
+  testRegex();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Avatar: harfi J">
+  <title>J avatar</title>
+  <defs>
+    <!-- Vertikal gradient: tepada och shaftoli, pastda yorqin pushti -->
+    <linearGradient id="peachToPink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFD9B4"/>
+      <stop offset="1" stop-color="#FF3D8E"/>
+    </linearGradient>
+  </defs>
+
+  <!-- To'q magenta fon -->
+  <rect width="512" height="512" fill="#430E36"/>
+
+  <!-- Gradientli doira -->
+  <circle cx="256" cy="256" r="200" fill="url(#peachToPink)"/>
+
+  <!-- "J" harfi: yumaloq uchli, qalin geometrik shakl (shriftga bog'liq emas) -->
+  <path d="M308 172 V288 A52 52 0 0 1 204 288"
+        fill="none"
+        stroke="#FFFFFF"
+        stroke-width="46"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>
