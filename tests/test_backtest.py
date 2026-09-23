@@ -7,8 +7,8 @@ import pytest
 from backtest import BacktestConfig, calc_lot, compute_stats, optimize, run_backtest, simulate
 from indicators import add_signals
 
-# point=1 → 1 point = $1; SL 100 / TP 200; 1% risk → 1.0 lot
-CFG = BacktestConfig(point=1.0, sl_points=100, tp_points=200,
+# Narx 1000 da SL 10% = 100, TP 20% = 200; 1% risk ($100) → 1.0 lot
+CFG = BacktestConfig(point=1.0, sl_percent=10, tp_percent=20,
                      initial_balance=10_000, risk_percent=1.0, contract_size=1.0)
 
 
@@ -110,7 +110,8 @@ def test_spread_applied_to_entry_and_sell_exit():
     cfg = replace(CFG, spread_points=10)
     buy = simulate(make_df([(1000, 1005, 995, 1000),
                             (1000, 1300, 1000, 1250)], signals=[1, 0]), cfg).trades.iloc[0]
-    assert (buy['entry'], buy['tp'], buy['exit']) == (1010, 1210, 1210)
+    # SL/TP masofasi Ask kirish narxidan: 1010 * 20% = 202
+    assert (buy['entry'], buy['tp'], buy['exit']) == (1010, 1212, 1212)
 
     # SELL Ask (Bid + spread) bo'yicha yopiladi: TP 800 ga Bid 790 da yetadi
     sell = simulate(make_df([(1000, 1005, 995, 1000),
@@ -148,17 +149,27 @@ def test_commission_deducted():
 
 
 def test_calc_lot_rounds_down_and_respects_limits():
-    cfg = BacktestConfig(point=1.0, sl_points=300, risk_percent=1.0, lot_step=0.01)
-    assert calc_lot(10_000, cfg) == pytest.approx(0.33)
-    assert calc_lot(10, cfg) == pytest.approx(cfg.min_lot)
-    assert calc_lot(1e9, cfg) == pytest.approx(cfg.max_lot)
+    cfg = BacktestConfig(risk_percent=1.0, lot_step=0.01)
+    assert calc_lot(10_000, 300, cfg) == pytest.approx(0.33)
+    assert calc_lot(10, 300, cfg) == pytest.approx(cfg.min_lot)
+    assert calc_lot(1e9, 300, cfg) == pytest.approx(cfg.max_lot)
+
+
+def test_sl_tp_scale_with_btc_price():
+    # Default 1% / 2%: BTC $50,000 da SL $500, TP $1,000 (avval point bilan atigi $2 / $4 edi)
+    df = make_df([(50_000, 50_010, 49_990, 50_000),
+                  (50_000, 51_100, 49_900, 51_000)], signals=[1, 0])
+    t = simulate(df, BacktestConfig()).trades.iloc[0]
+    assert (t['sl'], t['tp'], t['reason']) == (49_500, 51_000, "TP")
+    assert t['lot'] == pytest.approx(0.2)              # $100 risk / $500 SL
+    assert t['pnl'] == pytest.approx(200)              # 2% balans
 
 
 # ── To'liq backtest va optimizatsiya ────────────────────────
 
 def test_run_backtest_consistency():
     df = random_walk()
-    cfg = BacktestConfig(point=1.0, sl_points=300, tp_points=600)
+    cfg = BacktestConfig(point=1.0, sl_percent=1.0, tp_percent=2.0)
     res = run_backtest(df, cfg)
     stats = compute_stats(res)
     assert len(res.equity) == len(df)
@@ -170,7 +181,7 @@ def test_run_backtest_consistency():
 
 def test_optimize_grid_and_oos():
     df = random_walk()
-    base = BacktestConfig(point=1.0, sl_points=300, tp_points=600)
+    base = BacktestConfig(point=1.0, sl_percent=1.0, tp_percent=2.0)
     table = optimize(df, base, ema_fast_list=[5, 9, 25], ema_slow_list=[21, 30],
                      rsi_levels=[50], oos=0.3, min_trades=0, top_n=2)
     # (25, 21) tashlab ketiladi → 5 ta kombinatsiya

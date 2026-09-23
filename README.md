@@ -5,10 +5,11 @@ Bitcoin trading bot for MetaTrader 5
 
 | Fayl | Vazifasi |
 |------|----------|
-| `bitcoin_strategy.py` | Jonli bot: EMA(9/21) kesishuvi + RSI(14) filtri, SL/TP, 1% risk |
+| `bitcoin_strategy.py` | Jonli bot: EMA(9/21) kesishuvi + RSI(14) filtri, SL 1% / TP 2%, 1% risk |
 | `indicators.py` | EMA, RSI va signal mantiqi — bot va backtest uchun umumiy |
+| `risk.py` | SL/TP masofasi va lot hisoblash — bot va backtest uchun umumiy |
 | `backtest.py` | MT5 tarixida backtest + parametrlarni optimallashtirish |
-| `tests/` | Backtest testlari (MT5 kerak emas) |
+| `tests/` | Bot va backtest testlari (MT5 kerak emas) |
 
 ## O'rnatish
 
@@ -21,11 +22,11 @@ pip install -r requirements.txt
 ## Backtest
 
 ```bash
-# Hozirgi sozlamalar bilan (EMA 9/21, RSI 14, SL 200 / TP 400 point)
+# Hozirgi sozlamalar bilan (EMA 9/21, RSI 14, SL 1% / TP 2%)
 python backtest.py --from 2024-01-01 --to 2025-01-01
 
 # Boshqa timeframe va parametrlar
-python backtest.py --timeframe H4 --from 2023-01-01 --ema-fast 12 --ema-slow 26 --sl-points 150000 --tp-points 300000
+python backtest.py --timeframe H4 --from 2023-01-01 --ema-fast 12 --ema-slow 26 --sl-pct 1.5 --tp-pct 3
 ```
 
 MT5 login: terminalda hisob ochiq bo'lsa hech narsa kerak emas. Aks holda muhit o'zgaruvchilarini bering
@@ -36,7 +37,7 @@ $env:MT5_LOGIN="12345678"; $env:MT5_PASSWORD="parol"; $env:MT5_SERVER="Broker-Se
 ```
 
 Asosiy parametrlar: `--symbol`, `--timeframe` (M5, M15, M30, H1, H4, D1), `--balance`, `--risk`,
-`--ema-fast`, `--ema-slow`, `--rsi`, `--rsi-buy`, `--rsi-sell`, `--sl-points`, `--tp-points`,
+`--ema-fast`, `--ema-slow`, `--rsi`, `--rsi-buy`, `--rsi-sell`, `--sl-pct`, `--tp-pct`,
 `--spread-points` (default: MT5 tarixidagi spread), `--commission`, `--out`. To'liq ro'yxat: `python backtest.py -h`.
 
 Natijalar `results/` papkasida:
@@ -49,7 +50,7 @@ Natijalar `results/` papkasida:
 ```bash
 python backtest.py --from 2023-01-01 --optimize
 python backtest.py --from 2023-01-01 --optimize --opt-ema-fast 5,9,12 --opt-ema-slow 21,34,50 \
-    --opt-rsi 50,55 --opt-sl 50000,100000,200000 --opt-tp 100000,200000,400000
+    --opt-rsi 50,55 --opt-sl 0.5,1,2 --opt-tp 1,2,4
 ```
 
 - EMA fast/slow, RSI darajasi (BUY > L, SELL < 100-L) va SL/TP kombinatsiyalari sinab ko'riladi.
@@ -60,12 +61,16 @@ python backtest.py --from 2023-01-01 --optimize --opt-ema-fast 5,9,12 --opt-ema-
 
 ## Muhim eslatmalar
 
-- **SL/TP o'lchami.** Ko'p brokerlarda BTCUSD uchun `point = 0.01`, ya'ni botdagi SL 200 point = **atigi $2**,
-  TP = $4 — bu spread'dan ham kichik bo'lishi mumkin. Backtest boshida SL/TP narx birligida chiqariladi, tekshiring.
+- **SL/TP narx foizida.** `SL_PERCENT = 1.0`, `TP_PERCENT = 2.0` (bot sozlamalarida). BTC $100,000 da
+  SL ≈ $1,000, TP ≈ $2,000. Broker'ning `point` qiymatiga bog'liq emas (avval 200 point edi — `point = 0.01`
+  bo'lgan brokerlarda bu atigi $2 bo'lib, spread'dan ham kichik edi).
+- **Lot hisobi.** Lot shunday tanlanadiki, SL tegsa aynan `RISK_PERCENT` (1%) yo'qotiladi:
+  `lot = balans × 1% / (SL masofasi / tick_size × tick_value)`, broker'ning lot qadamiga pastga yaxlitlanadi.
+  Kichik hisobda minimal lot (0.01) ham 1% dan ko'p risk qilsa, bot ogohlantirish chiqaradi.
 - **Signal vaqti.** Jonli bot har 60 soniyada hali yopilmagan shamdan signal oladi; backtest esa signalni
   yopilgan shamda oladi va keyingi sham ochilishida kiradi. Natijalar farq qilishi mumkin.
 - **Simulyatsiya qoidalari.** Bir vaqtda 1 pozitsiya; bitta shamda SL ham TP ham tegsa — SL deb hisoblanadi;
-  gap bo'lsa — sham ochilish narxida chiqiladi; lot = balansning `--risk` % i / SL masofasi.
+  gap bo'lsa — sham ochilish narxida chiqiladi; lot bot bilan bir xil formulada (`risk.py`).
 - **Tarix uzunligi.** MT5 "Tools → Options → Charts → Max bars in chart" sozlamasi berilgan shamlar sonini
   cheklaydi. Ma'lumot kam kelsa, uni oshiring.
 - O'tgan natijalar kelajakni kafolatlamaydi. Bu moliyaviy maslahat emas.

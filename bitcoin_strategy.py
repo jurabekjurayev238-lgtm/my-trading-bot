@@ -10,6 +10,7 @@ import numpy as np
 from datetime import datetime
 
 from indicators import add_signals
+from risk import lot_from_risk, sl_tp_distance
 
 # ── SOZLAMALAR ──────────────────────────────────────────────
 SYMBOL       = "BTCUSD"
@@ -20,7 +21,9 @@ RSI_PERIOD   = 14                 # RSI davri
 RSI_BUY      = 50                 # RSI buy chegarasi
 RSI_SELL     = 50                 # RSI sell chegarasi
 RISK_PERCENT = 1.0                # Har bir tradeda hisobning 1% risk
-LOT_SIZE     = 0.01               # Minimal lot
+SL_PERCENT   = 1.0                # Stop-Loss: narxdan 1% (BTC $100k da ≈ $1,000)
+TP_PERCENT   = 2.0                # Take-Profit: narxdan 2% (RR 1:2)
+LOT_SIZE     = 0.01               # Minimal lot (simvol ma'lumoti bo'lmasa)
 MAGIC        = 123456             # Bot identifikatori
 # ────────────────────────────────────────────────────────────
 
@@ -65,35 +68,43 @@ def get_signal(df: pd.DataFrame) -> str:
     return "HOLD"
 
 
-def calc_lot(symbol: str, risk_percent: float, sl_points: float) -> float:
-    """Risk asosida lot hisoblash"""
+def calc_lot(symbol: str, risk_percent: float, sl_distance: float) -> float:
+    """
+    Risk asosida lot: SL tegsa hisobning risk_percent % i yo'qotiladi.
+    sl_distance — SL masofasi narx birligida (masalan $1,000).
+    """
     account_info = mt5.account_info()
-    if account_info is None:
+    info         = mt5.symbol_info(symbol)
+    if account_info is None or info is None:
         return LOT_SIZE
     balance      = account_info.balance
     risk_amount  = balance * (risk_percent / 100)
-    tick_value   = mt5.symbol_info(symbol).trade_tick_value
-    tick_size    = mt5.symbol_info(symbol).trade_tick_size
-    lot = risk_amount / (sl_points / tick_size * tick_value)
-    lot = round(max(lot, LOT_SIZE), 2)
+    loss_per_lot = sl_distance / info.trade_tick_size * info.trade_tick_value
+    lot = lot_from_risk(risk_amount, loss_per_lot,
+                        info.volume_min, info.volume_step, info.volume_max)
+
+    real_risk = lot * loss_per_lot
+    if balance > 0 and real_risk > risk_amount * 1.01:
+        print(f"⚠️  Minimal lot {lot} bilan risk ${real_risk:,.2f} "
+              f"({real_risk / balance * 100:.1f}%) — {risk_percent}% dan katta!")
     return lot
 
 
 def place_order(symbol: str, order_type: str, lot: float,
-                sl_pips: float = 200, tp_pips: float = 400):
-    """Buyurtma yuborish (Stop-Loss va Take-Profit bilan)"""
+                sl_distance: float, tp_distance: float):
+    """Buyurtma yuborish (Stop-Loss va Take-Profit bilan). Masofalar narx birligida."""
     tick      = mt5.symbol_info_tick(symbol)
-    point     = mt5.symbol_info(symbol).point
+    digits    = mt5.symbol_info(symbol).digits
 
     if order_type == "BUY":
         price = tick.ask
-        sl    = price - sl_pips * point
-        tp    = price + tp_pips * point
+        sl    = round(price - sl_distance, digits)
+        tp    = round(price + tp_distance, digits)
         otype = mt5.ORDER_TYPE_BUY
     else:
         price = tick.bid
-        sl    = price + sl_pips * point
-        tp    = price - tp_pips * point
+        sl    = round(price + sl_distance, digits)
+        tp    = round(price - tp_distance, digits)
         otype = mt5.ORDER_TYPE_SELL
 
     request = {
@@ -115,7 +126,7 @@ def place_order(symbol: str, order_type: str, lot: float,
     if result.retcode != mt5.TRADE_RETCODE_DONE:
         print(f"❌ Order xatosi: {result.retcode} | {result.comment}")
     else:
-        print(f"✅ {order_type} order ochildi | Price: {price:.2f} | SL: {sl:.2f} | TP: {tp:.2f}")
+        print(f"✅ {order_type} order ochildi | Lot: {lot} | Price: {price:.2f} | SL: {sl:.2f} | TP: {tp:.2f}")
     return result
 
 
@@ -132,6 +143,7 @@ def run_bot(login: int, password: str, server: str):
 
     print(f"\n🤖 Bitcoin Trading Bot ishga tushdi")
     print(f"📊 Juft: {SYMBOL} | TF: H1 | Strategiya: EMA({EMA_FAST}/{EMA_SLOW}) + RSI({RSI_PERIOD})")
+    print(f"🛡️  Risk: {RISK_PERCENT}% | SL: {SL_PERCENT}% | TP: {TP_PERCENT}%")
     print("⚠️  ESLATMA: Bu moliyaviy maslahat emas. Risklarni hisobga oling!\n")
 
     try:
@@ -147,8 +159,9 @@ def run_bot(login: int, password: str, server: str):
             print(f"[{now}] BTC: ${price:,.2f} | Signal: {signal}")
 
             if signal != "HOLD" and not has_open_position(SYMBOL):
-                lot = calc_lot(SYMBOL, RISK_PERCENT, sl_points=200)
-                place_order(SYMBOL, signal, lot, sl_pips=200, tp_pips=400)
+                sl_dist, tp_dist = sl_tp_distance(price, SL_PERCENT, TP_PERCENT)
+                lot = calc_lot(SYMBOL, RISK_PERCENT, sl_dist)
+                place_order(SYMBOL, signal, lot, sl_dist, tp_dist)
 
             # Har 60 soniyada tekshirish
             import time

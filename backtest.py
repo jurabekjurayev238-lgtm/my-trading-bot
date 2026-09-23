@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 
 from indicators import add_signals
+from risk import lot_from_risk, sl_tp_distance
 
 # ── SOZLAMALAR ──────────────────────────────────────────────
 DEFAULT_SYMBOL    = "BTCUSD"
@@ -47,8 +48,8 @@ class BacktestConfig:
     rsi_period: int   = 14
     rsi_buy:    float = 50
     rsi_sell:   float = 50
-    sl_points:  float = 200
-    tp_points:  float = 400
+    sl_percent: float = 1.0       # SL: kirish narxidan %
+    tp_percent: float = 2.0       # TP: kirish narxidan %
     # Hisob va risk
     initial_balance: float = 10_000.0
     risk_percent:    float = 1.0
@@ -125,15 +126,11 @@ def load_mt5_data(symbol: str, timeframe: str, date_from: datetime,
 
 # ── SIMULYATSIYA ────────────────────────────────────────────
 
-def calc_lot(balance: float, cfg: BacktestConfig) -> float:
-    """Risk asosida lot: balansning risk_percent qismi SL masofasiga teng"""
-    sl_value_per_lot = cfg.sl_points * cfg.point * cfg.contract_size
-    if sl_value_per_lot <= 0:
-        return cfg.min_lot
-    lot = balance * (cfg.risk_percent / 100) / sl_value_per_lot
-    lot = math.floor(lot / cfg.lot_step + 1e-9) * cfg.lot_step
-    lot = min(max(lot, cfg.min_lot), cfg.max_lot)
-    return round(lot, 8)
+def calc_lot(balance: float, sl_distance: float, cfg: BacktestConfig) -> float:
+    """Risk asosida lot (bot bilan bir xil formula: risk.lot_from_risk)"""
+    return lot_from_risk(balance * cfg.risk_percent / 100,
+                         sl_distance * cfg.contract_size,
+                         cfg.min_lot, cfg.lot_step, cfg.max_lot)
 
 
 def simulate(df: pd.DataFrame, cfg: BacktestConfig) -> BacktestResult:
@@ -153,8 +150,6 @@ def simulate(df: pd.DataFrame, cfg: BacktestConfig) -> BacktestResult:
     signals = df['signal'].to_numpy()
     n = len(df)
 
-    sl_dist = cfg.sl_points * cfg.point
-    tp_dist = cfg.tp_points * cfg.point
     spread  = cfg.spread_points * cfg.point
 
     balance = cfg.initial_balance
@@ -187,12 +182,13 @@ def simulate(df: pd.DataFrame, cfg: BacktestConfig) -> BacktestResult:
         if pos is None and i > 0 and signals[i - 1] != 0 and balance > 0:
             d     = int(signals[i - 1])
             entry = opens[i] + spread if d == 1 else opens[i]
+            sl_dist, tp_dist = sl_tp_distance(entry, cfg.sl_percent, cfg.tp_percent)
             pos = {
                 'dir':   d,
                 'entry': entry,
                 'sl':    entry - d * sl_dist,
                 'tp':    entry + d * tp_dist,
-                'lot':   calc_lot(balance, cfg),
+                'lot':   calc_lot(balance, sl_dist, cfg),
                 'time':  times[i],
             }
 
@@ -332,7 +328,7 @@ def plot_equity(result: BacktestResult, path: str) -> bool:
     ax1.plot(eq.index, eq.values, color="#2a7ae2", lw=1.2)
     ax1.axhline(cfg.initial_balance, color="gray", lw=0.8, ls="--")
     ax1.set_title(f"Equity | EMA({cfg.ema_fast}/{cfg.ema_slow}) + RSI({cfg.rsi_period}) "
-                  f"| SL {cfg.sl_points:g} / TP {cfg.tp_points:g} point")
+                  f"| SL {cfg.sl_percent:g}% / TP {cfg.tp_percent:g}%")
     ax1.set_ylabel("Equity ($)")
     ax1.grid(alpha=0.3)
     ax2.fill_between(dd_pct.index, dd_pct.values, 0, color="#d9534f", alpha=0.4)
@@ -356,8 +352,8 @@ def optimize(df: pd.DataFrame, base_cfg: BacktestConfig,
     parametrlar faqat in-sample'da tanlanadi, eng yaxshi top_n tasi out-of-sample'da
     qayta tekshiriladi (oos_* ustunlari) — overfitting'ni aniqlash uchun.
     """
-    sl_list = sl_list or [base_cfg.sl_points]
-    tp_list = tp_list or [base_cfg.tp_points]
+    sl_list = sl_list or [base_cfg.sl_percent]
+    tp_list = tp_list or [base_cfg.tp_percent]
     split   = int(len(df) * (1 - oos))
 
     signal_cache = {}
@@ -370,12 +366,12 @@ def optimize(df: pd.DataFrame, base_cfg: BacktestConfig,
         for sl, tp in itertools.product(sl_list, tp_list):
             cfg = replace(base_cfg, ema_fast=fast, ema_slow=slow,
                           rsi_buy=level, rsi_sell=100 - level,
-                          sl_points=sl, tp_points=tp)
+                          sl_percent=sl, tp_percent=tp)
             stats = compute_stats(simulate(sig_df.iloc[:split], cfg))
             rows.append({
                 'ema_fast': fast, 'ema_slow': slow,
                 'rsi_buy': level, 'rsi_sell': 100 - level,
-                'sl_points': sl, 'tp_points': tp,
+                'sl_pct': sl, 'tp_pct': tp,
                 **{k: stats[k] for k in ('trades', 'win_rate', 'profit_factor',
                                          'net_profit', 'return_pct', 'max_dd_pct')},
             })
@@ -397,7 +393,7 @@ def optimize(df: pd.DataFrame, base_cfg: BacktestConfig,
             key = (int(r['ema_fast']), int(r['ema_slow']), r['rsi_buy'])
             cfg = replace(base_cfg, ema_fast=key[0], ema_slow=key[1],
                           rsi_buy=r['rsi_buy'], rsi_sell=r['rsi_sell'],
-                          sl_points=r['sl_points'], tp_points=r['tp_points'])
+                          sl_percent=r['sl_pct'], tp_percent=r['tp_pct'])
             stats = compute_stats(simulate(signal_cache[key].iloc[split:], cfg))
             table.loc[idx, 'oos_trades']        = stats['trades']
             table.loc[idx, 'oos_win_rate']      = stats['win_rate']
@@ -435,8 +431,8 @@ def parse_args():
     p.add_argument("--rsi",       type=int,   default=d.rsi_period)
     p.add_argument("--rsi-buy",   type=float, default=d.rsi_buy)
     p.add_argument("--rsi-sell",  type=float, default=d.rsi_sell)
-    p.add_argument("--sl-points", type=float, default=d.sl_points)
-    p.add_argument("--tp-points", type=float, default=d.tp_points)
+    p.add_argument("--sl-pct",    type=float, default=d.sl_percent, help="Stop-Loss, kirish narxidan %%")
+    p.add_argument("--tp-pct",    type=float, default=d.tp_percent, help="Take-Profit, kirish narxidan %%")
     p.add_argument("--spread-points", type=float, default=None,
                    help="Default: MT5 tarixidagi spread medianasi")
     p.add_argument("--commission", type=float, default=d.commission_per_lot,
@@ -448,8 +444,8 @@ def parse_args():
     p.add_argument("--opt-ema-slow", type=_int_list,   default=OPT_EMA_SLOW)
     p.add_argument("--opt-rsi",      type=_float_list, default=OPT_RSI_LEVELS,
                    help="RSI darajalari: BUY > L, SELL < 100-L")
-    p.add_argument("--opt-sl",       type=_float_list, default=None, help="Masalan: 200,1000,5000")
-    p.add_argument("--opt-tp",       type=_float_list, default=None, help="Masalan: 400,2000,10000")
+    p.add_argument("--opt-sl",       type=_float_list, default=None, help="SL %%, masalan: 0.5,1,2")
+    p.add_argument("--opt-tp",       type=_float_list, default=None, help="TP %%, masalan: 1,2,4")
     p.add_argument("--oos",          type=float, default=0.3, help="Out-of-sample ulushi (0..1)")
     p.add_argument("--min-trades",   type=int,   default=OPT_MIN_TRADES)
     return p.parse_args()
@@ -462,7 +458,7 @@ def main():
     cfg = BacktestConfig(
         ema_fast=args.ema_fast, ema_slow=args.ema_slow, rsi_period=args.rsi,
         rsi_buy=args.rsi_buy, rsi_sell=args.rsi_sell,
-        sl_points=args.sl_points, tp_points=args.tp_points,
+        sl_percent=args.sl_pct, tp_percent=args.tp_pct,
         initial_balance=args.balance, risk_percent=args.risk,
         commission_per_lot=args.commission,
     )
@@ -472,10 +468,13 @@ def main():
     df, cfg = load_mt5_data(args.symbol, args.timeframe, args.date_from, date_to,
                             cfg, args.spread_points)
     print(f"✅ {len(df)} ta sham | {df['time'].iloc[0]} → {df['time'].iloc[-1]}")
-    print(f"ℹ️  point={cfg.point:g} | contract={cfg.contract_size:g} | spread={cfg.spread_points:g} point | "
+    last_price = df['close'].iloc[-1]
+    print(f"ℹ️  point={cfg.point:g} | contract={cfg.contract_size:g} | "
+          f"spread={cfg.spread_points:g} point (${cfg.spread_points * cfg.point:,.2f}) | "
           f"lot {cfg.min_lot:g}..{cfg.max_lot:g} (qadam {cfg.lot_step:g})")
-    print(f"ℹ️  SL = {cfg.sl_points:g} point = {cfg.sl_points * cfg.point:,.2f} narx birligi | "
-          f"TP = {cfg.tp_points:g} point = {cfg.tp_points * cfg.point:,.2f} narx birligi")
+    print(f"ℹ️  SL = {cfg.sl_percent:g}% (≈${last_price * cfg.sl_percent / 100:,.0f}) | "
+          f"TP = {cfg.tp_percent:g}% (≈${last_price * cfg.tp_percent / 100:,.0f}) | "
+          f"oxirgi narx ${last_price:,.0f} da")
 
     if len(df) < cfg.ema_slow + cfg.rsi_period + 2:
         print("❌ Ma'lumot juda kam — sanalar oralig'ini kattalashtiring")
@@ -506,7 +505,7 @@ def main():
         opt_path = os.path.join(args.out, "optimization.csv")
         table.to_csv(opt_path, index=False)
 
-        cols = ['ema_fast', 'ema_slow', 'rsi_buy', 'sl_points', 'tp_points', 'trades',
+        cols = ['ema_fast', 'ema_slow', 'rsi_buy', 'sl_pct', 'tp_pct', 'trades',
                 'win_rate', 'profit_factor', 'net_profit', 'max_dd_pct']
         cols += [c for c in ('oos_trades', 'oos_profit_factor', 'oos_net_profit') if c in table]
         print("\n🏆 Eng yaxshi 10 ta (in-sample, profit factor bo'yicha):")
