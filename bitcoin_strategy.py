@@ -9,6 +9,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
+from indicators import add_signals
+
 # ── SOZLAMALAR ──────────────────────────────────────────────
 SYMBOL       = "BTCUSD"
 TIMEFRAME    = mt5.TIMEFRAME_H1   # 1 soatlik chart
@@ -48,48 +50,18 @@ def get_candles(symbol: str, timeframe: int, count: int = 100) -> pd.DataFrame:
     return df
 
 
-def calc_ema(series: pd.Series, period: int) -> pd.Series:
-    """EMA hisoblash"""
-    return series.ewm(span=period, adjust=False).mean()
-
-
-def calc_rsi(series: pd.Series, period: int = 14) -> pd.Series:
-    """RSI hisoblash"""
-    delta = series.diff()
-    gain  = delta.clip(lower=0)
-    loss  = -delta.clip(upper=0)
-    avg_gain = gain.ewm(com=period - 1, min_periods=period).mean()
-    avg_loss = loss.ewm(com=period - 1, min_periods=period).mean()
-    rs  = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-    return rsi
-
-
 def get_signal(df: pd.DataFrame) -> str:
     """
-    Signal aniqlash:
+    Signal aniqlash (mantiq indicators.add_signals da — backtest bilan umumiy):
     BUY  → EMA_fast yuqoriga kesib o'tdi + RSI > 50
     SELL → EMA_fast pastga kesib o'tdi + RSI < 50
     """
-    df['ema_fast'] = calc_ema(df['close'], EMA_FAST)
-    df['ema_slow'] = calc_ema(df['close'], EMA_SLOW)
-    df['rsi']      = calc_rsi(df['close'], RSI_PERIOD)
-
-    prev = df.iloc[-2]
-    curr = df.iloc[-1]
-
-    # BUY signali
-    if (prev['ema_fast'] < prev['ema_slow'] and
-            curr['ema_fast'] > curr['ema_slow'] and
-            curr['rsi'] > RSI_BUY):
+    df = add_signals(df, EMA_FAST, EMA_SLOW, RSI_PERIOD, RSI_BUY, RSI_SELL)
+    signal = df['signal'].iloc[-1]
+    if signal == 1:
         return "BUY"
-
-    # SELL signali
-    if (prev['ema_fast'] > prev['ema_slow'] and
-            curr['ema_fast'] < curr['ema_slow'] and
-            curr['rsi'] < RSI_SELL):
+    if signal == -1:
         return "SELL"
-
     return "HOLD"
 
 
